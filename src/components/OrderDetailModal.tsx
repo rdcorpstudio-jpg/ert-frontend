@@ -9,6 +9,7 @@ export type OrderDetail = {
   order: {
     id: number;
     order_code: string;
+    order_status?: string;
     customer_name: string | null;
     customer_phone: string | null;
     shipping_address_text: string | null;
@@ -36,7 +37,7 @@ export type OrderDetail = {
   net_total: number;
   /** Main product editable: Pending; or Checked/Packing when net total unchanged; never after Shipped */
   product_editable?: boolean;
-  files: Array<{ file_type: string; file_url: string; [key: string]: unknown }>;
+  files: Array<{ id?: number; file_type: string; file_url: string; [key: string]: unknown }>;
   alerts: Array<{ id: number; message: string; is_read: boolean; target_role?: string; [key: string]: unknown }>;
   [key: string]: unknown;
 };
@@ -668,7 +669,7 @@ export default function OrderDetailModal({
             <div style={{ ...value, marginBottom: 8 }}>{orderStatus || "—"}</div>
             {canChangeOrderStatus ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 16 }}>
-                {allowedNextStatuses.map((next) => (
+                {allowedNextStatuses.map((next: string) => (
                   <button
                     key={next}
                     type="button"
@@ -1278,7 +1279,7 @@ export default function OrderDetailModal({
             <div style={{ ...value, marginBottom: 8 }}>{orderStatus || "—"}</div>
             {allowedNextStatuses.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 24 }}>
-                {allowedNextStatuses.map((next) => (
+                {allowedNextStatuses.map((next: string) => (
                   <button
                     key={next}
                     type="button"
