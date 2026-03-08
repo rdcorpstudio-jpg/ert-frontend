@@ -121,7 +121,7 @@ export default function LoginPage() {
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>
-        <h1 style={titleStyle}>Welcome back</h1>
+        <h1 style={titleStyle}>SG ERP System</h1>
         <p style={subtitleStyle}>Sign in to continue</p>
 
         <form style={formStyle} onSubmit={handleLogin}>
