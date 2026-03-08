@@ -703,18 +703,46 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
-            <div style={label}>Customer</div>
-            <div style={value}>{customerName || "—"} {customerPhone ? ` · ${customerPhone}` : ""}</div>
-            <div style={label}>Shipping address</div>
-            <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingAddress?.trim() || "—"}</div>
-            <div style={label}>Shipping Date</div>
-            <div style={value}>{shippingDate || "—"}</div>
-            <div style={label}>Shipping Note</div>
-            <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingNote?.trim() || "—"}</div>
-            <div style={label}>Main product</div>
-            <div style={value}>{items.length ? items.map((i) => i.product_name).join(", ") : "—"}</div>
-            <div style={label}>Freebie product</div>
-            <div style={value}>{orderFreebies.length ? orderFreebies.map((f) => f.freebie_name ?? `Freebie #${f.id}`).join(", ") : "—"}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={label}>Customer</div>
+                <div style={value}>{customerName || "—"} {customerPhone ? ` · ${customerPhone}` : ""}</div>
+              </div>
+              <div>
+                <div style={label}>Shipping address</div>
+                <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingAddress?.trim() || "—"}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={label}>Shipping Date</div>
+                <div style={value}>{shippingDate || "—"}</div>
+              </div>
+              <div>
+                <div style={label}>Shipping Note</div>
+                <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingNote?.trim() || "—"}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={label}>Main product</div>
+                <div style={value}>{items.length ? items.map((i) => i.product_name).join(", ") : "—"}</div>
+              </div>
+              <div>
+                <div style={label}>Net Price</div>
+                <div style={value}>฿{netTotal.toLocaleString()}</div>
+              </div>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
+              <div>
+                <div style={label}>Freebie product</div>
+                <div style={value}>{orderFreebies.length ? orderFreebies.map((f) => f.freebie_name ?? `Freebie #${f.id}`).join(", ") : "—"}</div>
+              </div>
+              <div>
+                <div style={label}>Freebie Note</div>
+                <div style={{ ...value, whiteSpace: "pre-wrap" }}>{freebieNote?.trim() || "—"}</div>
+              </div>
+            </div>
             <div style={label}>Tracking number</div>
             <div style={value}>{trackingNumber?.trim() || "—"}</div>
             {getFilesByType(files, "invoice_submit").length > 0 && (
