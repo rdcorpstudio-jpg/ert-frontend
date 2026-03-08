@@ -1,0 +1,205 @@
+import React from "react";
+import { Link, Navigate } from "react-router-dom";
+
+function getUserRole(): string {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return "";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return (payload?.role as string) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export default function MenuPage() {
+  if (!localStorage.getItem("token")) return <Navigate to="/login" replace />;
+  const role = getUserRole();
+  const isManager = role === "manager";
+  const canAccessAccountant = role === "account" || role === "manager";
+  const pageStyle: React.CSSProperties = {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 24,
+    background: "#1a1a1a",
+    fontFamily: "system-ui, -apple-system, sans-serif",
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: 28,
+    fontWeight: 600,
+    color: "#eee",
+    marginBottom: 32,
+  };
+
+  const cardWrapStyle: React.CSSProperties = {
+    display: "flex",
+    gap: 24,
+    flexWrap: "wrap",
+    justifyContent: "center",
+  };
+
+  const cardStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    minWidth: 220,
+    minHeight: 160,
+    padding: 32,
+    background: "#252525",
+    border: "1px solid #444",
+    borderRadius: 12,
+    textDecoration: "none",
+    color: "#eee",
+    transition: "background 0.2s, border-color 0.2s",
+  };
+
+  const iconStyle: React.CSSProperties = {
+    fontSize: 48,
+    marginBottom: 16,
+  };
+
+  const labelStyle: React.CSSProperties = {
+    fontSize: 18,
+    fontWeight: 600,
+    marginBottom: 8,
+  };
+
+  const descStyle: React.CSSProperties = {
+    fontSize: 14,
+    color: "#999",
+    textAlign: "center",
+  };
+
+  return (
+    <div style={pageStyle}>
+      <h1 style={titleStyle}>Menu</h1>
+      <div style={cardWrapStyle}>
+        <Link
+          to="/orders/create"
+          style={cardStyle}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "#2a2a2a";
+            e.currentTarget.style.borderColor = "#2563eb";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = "#252525";
+            e.currentTarget.style.borderColor = "#444";
+          }}
+        >
+          <span style={iconStyle}>📝</span>
+          <span style={labelStyle}>Create Order</span>
+          <span style={descStyle}>Create a new order</span>
+        </Link>
+        <Link
+          to="/orders"
+          style={cardStyle}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "#2a2a2a";
+            e.currentTarget.style.borderColor = "#2563eb";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = "#252525";
+            e.currentTarget.style.borderColor = "#444";
+          }}
+        >
+          <span style={iconStyle}>📋</span>
+          <span style={labelStyle}>View Order List</span>
+          <span style={descStyle}>Search and view orders</span>
+        </Link>
+        {canAccessAccountant && (
+          <>
+            <Link
+              to="/orders/accountant"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>📒</span>
+              <span style={labelStyle}>Accountant</span>
+              <span style={descStyle}>Orders by payment status</span>
+            </Link>
+            <Link
+              to="/orders/invoice-submit"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>📄</span>
+              <span style={labelStyle}>Invoice Submit</span>
+              <span style={descStyle}>Upload invoice for orders that require it</span>
+            </Link>
+          </>
+        )}
+        <Link
+          to="/orders/packing"
+          style={cardStyle}
+          onMouseOver={(e) => {
+            e.currentTarget.style.background = "#2a2a2a";
+            e.currentTarget.style.borderColor = "#2563eb";
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.background = "#252525";
+            e.currentTarget.style.borderColor = "#444";
+          }}
+        >
+          <span style={iconStyle}>📦</span>
+          <span style={labelStyle}>แพ็ควันนี้</span>
+          <span style={descStyle}>Today’s packing (Pending, Checked, Packing, Shipped)</span>
+        </Link>
+        {(role === "pack" || role === "manager") && (
+          <Link
+            to="/orders/tracking"
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#2a2a2a";
+              e.currentTarget.style.borderColor = "#2563eb";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#252525";
+              e.currentTarget.style.borderColor = "#444";
+            }}
+          >
+            <span style={iconStyle}>🔢</span>
+            <span style={labelStyle}>Tracking Number</span>
+            <span style={descStyle}>Add or edit tracking (Shipped, Success, Fail, Return)</span>
+          </Link>
+        )}
+        {isManager && (
+          <Link
+            to="/dev"
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#2a2a2a";
+              e.currentTarget.style.borderColor = "#2563eb";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#252525";
+              e.currentTarget.style.borderColor = "#444";
+            }}
+          >
+            <span style={iconStyle}>⚙️</span>
+            <span style={labelStyle}>Dev</span>
+            <span style={descStyle}>Create product, category &amp; account (Manager only)</span>
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+}
