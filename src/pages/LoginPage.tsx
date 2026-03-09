@@ -63,7 +63,7 @@ export default function LoginPage() {
   };
 
   const subtitleStyle: React.CSSProperties = {
-    margin: "0 0 28px",
+    margin: 0,
     fontSize: 14,
     color: "#888",
   };
@@ -123,7 +123,21 @@ export default function LoginPage() {
       <div style={cardStyle}>
         <h1 style={titleStyle}>SG ERP System</h1>
         <p style={subtitleStyle}>Sign in to continue</p>
-
+        <div style={{ textAlign: "center", marginBottom: -8, overflow: "hidden" }}>
+          <img
+            src="https://images2.imgbox.com/d0/a8/gDJfO17C_o.png"
+            alt="SG ERP logo"
+            style={{
+              maxWidth: 280,
+              width: "100%",
+              height: 160,
+              objectFit: "cover",
+              objectPosition: "center",
+              display: "block",
+              margin: "0 auto",
+            }}
+          />
+        </div>
         <form style={formStyle} onSubmit={handleLogin}>
           <div>
             <label htmlFor="login-email" style={labelStyle}>
