@@ -28,13 +28,6 @@ export default function MenuPage() {
     fontFamily: "system-ui, -apple-system, sans-serif",
   };
 
-  const titleStyle: React.CSSProperties = {
-    fontSize: 28,
-    fontWeight: 600,
-    color: "#eee",
-    marginBottom: 32,
-  };
-
   const cardWrapStyle: React.CSSProperties = {
     display: "flex",
     gap: 24,
@@ -77,7 +70,13 @@ export default function MenuPage() {
 
   return (
     <div style={pageStyle}>
-      <h1 style={titleStyle}>Menu</h1>
+      <div style={{ textAlign: "center", marginBottom: 24 }}>
+        <img
+          src="https://images2.imgbox.com/23/c3/w7rGf8bp_o.png"
+          alt="SG ERP logo"
+          style={{ maxWidth: 260, width: "100%", height: "auto" }}
+        />
+      </div>
       <div style={cardWrapStyle}>
         <Link
           to="/orders/create"
@@ -92,7 +91,7 @@ export default function MenuPage() {
           }}
         >
           <span style={iconStyle}>📝</span>
-          <span style={labelStyle}>Create Order</span>
+          <span style={labelStyle}>สร้างออเดอร์ใหม่</span>
           <span style={descStyle}>Create a new order</span>
         </Link>
         <Link
@@ -108,7 +107,7 @@ export default function MenuPage() {
           }}
         >
           <span style={iconStyle}>📋</span>
-          <span style={labelStyle}>View Order List</span>
+          <span style={labelStyle}>รายการออเดอร์ทั้งหมด</span>
           <span style={descStyle}>Search and view orders</span>
         </Link>
         {canAccessAccountant && (
@@ -126,8 +125,8 @@ export default function MenuPage() {
               }}
             >
               <span style={iconStyle}>📒</span>
-              <span style={labelStyle}>Accountant</span>
-              <span style={descStyle}>Orders by payment status</span>
+              <span style={labelStyle}>ฝ่ายบัญชี</span>
+              <span style={descStyle}>เช็คสถานะการชำระเงินของออเดอร์</span>
             </Link>
             <Link
               to="/orders/invoice-submit"
@@ -142,8 +141,8 @@ export default function MenuPage() {
               }}
             >
               <span style={iconStyle}>📄</span>
-              <span style={labelStyle}>Invoice Submit</span>
-              <span style={descStyle}>Upload invoice for orders that require it</span>
+              <span style={labelStyle}>อัพโหลดใบกำกับภาษี</span>
+              <span style={descStyle}>อัพโหลดใบกำกับภาษีของออเดอร์ที่ต้องการ</span>
             </Link>
           </>
         )}
@@ -160,8 +159,8 @@ export default function MenuPage() {
           }}
         >
           <span style={iconStyle}>📦</span>
-          <span style={labelStyle}>แพ็ควันนี้</span>
-          <span style={descStyle}>Today’s packing (Pending, Checked, Packing, Shipped)</span>
+          <span style={labelStyle}>ออร์เดอร์ที่ต้องแพ็ควันนี้</span>
+          <span style={descStyle}>สำหรับทีมแพ็ค</span>
         </Link>
         {(role === "pack" || role === "manager") && (
           <Link
@@ -177,8 +176,8 @@ export default function MenuPage() {
             }}
           >
             <span style={iconStyle}>🔢</span>
-            <span style={labelStyle}>Tracking Number</span>
-            <span style={descStyle}>Add or edit tracking (Shipped, Success, Fail, Return)</span>
+            <span style={labelStyle}>กรอก Tracking Number</span>
+            <span style={descStyle}>สำหรับทีมแพ็ค</span>
           </Link>
         )}
         {isManager && (

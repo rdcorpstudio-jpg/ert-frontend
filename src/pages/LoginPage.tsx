@@ -123,18 +123,17 @@ export default function LoginPage() {
       <div style={cardStyle}>
         <h1 style={titleStyle}>SG ERP System</h1>
         <p style={subtitleStyle}>Sign in to continue</p>
-        <div style={{ textAlign: "center", marginBottom: -8, overflow: "hidden" }}>
+        <div style={{ textAlign: "center" }}>
           <img
-            src="https://images2.imgbox.com/d0/a8/gDJfO17C_o.png"
+            src="https://images2.imgbox.com/23/c3/w7rGf8bp_o.png"
             alt="SG ERP logo"
             style={{
-              maxWidth: 280,
+              maxWidth: 260,
               width: "100%",
-              height: 160,
-              objectFit: "cover",
-              objectPosition: "center",
+              height: "auto",
+              objectFit: "contain",
               display: "block",
-              margin: "0 auto",
+              margin: "4px auto 8px",
             }}
           />
         </div>
