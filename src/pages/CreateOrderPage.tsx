@@ -488,6 +488,8 @@ export default function CreateOrderPage() {
                   let discountAmount = 0;
                   if (value === "5")
                     discountAmount = product.price * 0.05;
+                  if (value === "8")
+                    discountAmount = product.price * 0.08;
                   if (value === "10")
                     discountAmount = product.price * 0.1;
                   if (value === "15")
@@ -502,6 +504,7 @@ export default function CreateOrderPage() {
               >
                 <option value="">-- ส่วนลด --</option>
                 <option value="5">5%</option>
+                <option value="8">8%</option>
                 <option value="10">10%</option>
                 <option value="15">15%</option>
                 <option value="20">20%</option>
