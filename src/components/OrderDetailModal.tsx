@@ -712,45 +712,45 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
-            <div style={label}>Sale name</div>
+            <div style={label}>Sale ที่ขาย</div>
             <div style={{ ...value, marginBottom: 16 }}>{saleName ?? "—"}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
-                <div style={label}>Customer</div>
+                <div style={label}>ชื่อลูกค้า</div>
                 <div style={value}>{customerName || "—"} {customerPhone ? ` · ${customerPhone}` : ""}</div>
               </div>
               <div>
-                <div style={label}>Shipping address</div>
+                <div style={label}>ที่อยู่จัดส่ง</div>
                 <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingAddress?.trim() || "—"}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
-                <div style={label}>Shipping Date</div>
+                <div style={label}>วันที่จัดส่ง</div>
                 <div style={value}>{shippingDate || "—"}</div>
               </div>
               <div>
-                <div style={label}>Shipping Note</div>
+                <div style={label}>Note การจัดส่ง</div>
                 <div style={{ ...value, whiteSpace: "pre-wrap" }}>{shippingNote?.trim() || "—"}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
-                <div style={label}>Main product</div>
+                <div style={label}>รายการสินค้า</div>
                 <div style={value}>{items.length ? items.map((i) => i.product_name).join(", ") : "—"}</div>
               </div>
               <div>
-                <div style={label}>Net Price</div>
+                <div style={label}>ยอดชำระทั้งหมด</div>
                 <div style={value}>฿{netTotal.toLocaleString()}</div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
-                <div style={label}>Freebie product</div>
+                <div style={label}>ของแถม</div>
                 <div style={value}>{orderFreebies.length ? orderFreebies.map((f) => f.freebie_name ?? `Freebie #${f.id}`).join(", ") : "—"}</div>
               </div>
               <div>
-                <div style={label}>Freebie Note</div>
+                <div style={label}>Note ของแถม</div>
                 <div style={{ ...value, whiteSpace: "pre-wrap" }}>{freebieNote?.trim() || "—"}</div>
               </div>
             </div>
@@ -1079,7 +1079,7 @@ export default function OrderDetailModal({
         {activeTab === "payment" && (
           <>
         <div style={sectionTitle}>Payment & Invoice</div>
-        <div style={label}>Payment Method</div>
+        <div style={label}>ช่องทางการชำระเงิน</div>
         {canEditPaymentMethod ? (
           <>
             <select
@@ -1156,6 +1156,10 @@ export default function OrderDetailModal({
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
           </div>
         )}
+        <div style={{ marginTop: 12, marginBottom: 4 }}>
+          <div style={label}>จำนวนเงินที่ต้องชำระ</div>
+          <div style={value}>฿{netTotal.toLocaleString()}</div>
+        </div>
         {getFileByType(files, "chat_evidence") && (
           <a
             href={getFileByType(files, "chat_evidence")!.file_url}
@@ -1177,7 +1181,7 @@ export default function OrderDetailModal({
           </a>
         )}
         <div style={{ marginTop: 16 }}>
-          <div style={label}>Payment Status (Accounting can update)</div>
+          <div style={label}>Payment Status (เฉพาะฝ่ายบัญชี)</div>
           <select
             value={paymentStatus}
             onChange={(e) => setPaymentStatus(e.target.value)}
