@@ -137,7 +137,15 @@ export default function OrderDetailModal({
   const orderFreebies = detail?.order_freebies ?? [];
   const netTotal = detail?.net_total ?? 0;
   const productEditable = detail?.product_editable ?? false;
-  const saleName = (detail as { sale_name?: string | null })?.sale_name ?? (order as { sale_name?: string | null })?.sale_name ?? null;
+  // Display name of the User (sale) who created this order — should match that user's name exactly
+  const saleName =
+    (detail as { sale_name?: string | null })?.sale_name ??
+    (order as { sale_name?: string | null })?.sale_name ??
+    (detail as { sale_user_name?: string | null })?.sale_user_name ??
+    (order as { sale_user_name?: string | null })?.sale_user_name ??
+    (detail as { created_by_name?: string | null })?.created_by_name ??
+    (order as { created_by_name?: string | null })?.created_by_name ??
+    null;
 
   // Backend rule: shipping/customer editable only when status is Pending or Checked (manager can always edit on backend; we disable by status in UI)
   const orderStatus = order?.order_status ?? "";
