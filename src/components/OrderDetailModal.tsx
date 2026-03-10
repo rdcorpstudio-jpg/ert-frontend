@@ -712,8 +712,36 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
-            <div style={label}>Sale ที่ขาย</div>
-            <div style={{ ...value, marginBottom: 16 }}>{saleName ?? "—"}</div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              <div>
+                <div style={label}>Sale ที่ขาย</div>
+                <div style={value}>{saleName ?? "—"}</div>
+              </div>
+              {getFileByType(files, "shipping_address_image") && (
+                <a
+                  href={getFileByType(files, "shipping_address_image")!.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    ...linkBtn,
+                    whiteSpace: "nowrap",
+                    padding: "6px 10px",
+                    fontSize: 12,
+                  }}
+                  title="เปิดไฟล์ที่อยู่จัดส่ง"
+                >
+                  📎 ที่อยู่จัดส่ง
+                </a>
+              )}
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
                 <div style={label}>ชื่อลูกค้า</div>
