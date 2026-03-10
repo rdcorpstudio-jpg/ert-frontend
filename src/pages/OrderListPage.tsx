@@ -18,6 +18,7 @@ type OrderRow = {
   invoice_submit_file_url?: string | null;
   sale_id?: number | null;
   tracking_number?: string | null;
+  shipping_date?: string | null;
 };
 
 // -----------------------------------------------------------------------------
@@ -412,7 +413,25 @@ export default function OrderListPage() {
                     onMouseLeave={() => setHoveredRowId(null)}
                   >
                     <td style={td}>{index + 1}</td>
-                    <td style={td}>{rowData.order_code ?? "-"}</td>
+                    <td style={td}>
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+                        {rowData.order_code ?? "-"}
+                        {(!rowData.shipping_date || String(rowData.shipping_date).trim() === "") && (
+                          <span
+                            title="ยังไม่ได้เลือกวันจัดส่ง"
+                            style={{
+                              display: "inline-flex",
+                              color: "#22c55e",
+                              fontSize: 16,
+                              cursor: "help",
+                              lineHeight: 1,
+                            }}
+                          >
+                            ⚠
+                          </span>
+                        )}
+                      </span>
+                    </td>
                     <td style={td}>{rowData.customer_name ?? "-"}</td>
                     <td style={td}>{rowData.order_status ?? "-"}</td>
                     <td style={td}>{rowData.payment_status ?? "-"}</td>
