@@ -146,22 +146,24 @@ export default function MenuPage() {
             </Link>
           </>
         )}
-        <Link
-          to="/orders/packing"
-          style={cardStyle}
-          onMouseOver={(e) => {
-            e.currentTarget.style.background = "#2a2a2a";
-            e.currentTarget.style.borderColor = "#2563eb";
-          }}
-          onMouseOut={(e) => {
-            e.currentTarget.style.background = "#252525";
-            e.currentTarget.style.borderColor = "#444";
-          }}
-        >
-          <span style={iconStyle}>📦</span>
-          <span style={labelStyle}>ออร์เดอร์ที่ต้องแพ็ควันนี้</span>
-          <span style={descStyle}>สำหรับทีมแพ็ค</span>
-        </Link>
+        {(role === "pack" || role === "manager") && (
+          <Link
+            to="/orders/packing"
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#2a2a2a";
+              e.currentTarget.style.borderColor = "#2563eb";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#252525";
+              e.currentTarget.style.borderColor = "#444";
+            }}
+          >
+            <span style={iconStyle}>📦</span>
+            <span style={labelStyle}>ออร์เดอร์ที่ต้องแพ็ควันนี้</span>
+            <span style={descStyle}>สำหรับทีมแพ็ค</span>
+          </Link>
+        )}
         {(role === "pack" || role === "manager") && (
           <Link
             to="/orders/tracking"
