@@ -30,6 +30,14 @@ const PAYMENT_COLUMNS = [
   { key: "Unmatched", label: "Unmatched" },
 ] as const;
 
+const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
+  { value: "", label: "All" },
+  { value: "cod", label: "ปลายทาง (COD)" },
+  { value: "transfer", label: "โอน" },
+  { value: "card_2c2p", label: "บัตร 2C2P" },
+  { value: "card_pay", label: "บัตร PAY" },
+];
+
 export default function AccountantPage() {
   const [ordersByStatus, setOrdersByStatus] = useState<Record<string, OrderRow[]>>({
     Unchecked: [],
@@ -44,6 +52,8 @@ export default function AccountantPage() {
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
+  const [keyword, setKeyword] = useState("");
 
   const role = getUserRole();
   const canAccess = role === "account" || role === "manager";
@@ -52,9 +62,15 @@ export default function AccountantPage() {
     setLoading(true);
     setError(null);
     Promise.all(
-      PAYMENT_COLUMNS.map(({ key }) =>
-        api.get<OrderRow[]>("/orders", { params: { payment_status: key, sort_by: "oldest" } })
-      )
+      PAYMENT_COLUMNS.map(({ key }) => {
+        const params: Record<string, string> = {
+          payment_status: key,
+          sort_by: "oldest",
+        };
+        if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
+        if (keyword.trim()) params.keyword = keyword.trim();
+        return api.get<OrderRow[]>("/orders", { params });
+      })
     )
       .then((results) => {
         const next: Record<string, OrderRow[]> = {};
@@ -68,8 +84,9 @@ export default function AccountantPage() {
   };
 
   useEffect(() => {
-    fetchAll();
-  }, []);
+    const t = setTimeout(() => fetchAll(), keyword ? 300 : 0);
+    return () => clearTimeout(t);
+  }, [paymentMethodFilter, keyword]);
 
   const openDetail = async (orderId: number) => {
     setSelectedOrderId(orderId);
@@ -231,6 +248,46 @@ export default function AccountantPage() {
           {error}
         </div>
       )}
+
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16, flexWrap: "wrap" }}>
+        <span style={{ color: "#aaa", fontSize: 14 }}>Payment method:</span>
+        <select
+          value={paymentMethodFilter}
+          onChange={(e) => setPaymentMethodFilter(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#252525",
+            color: "#eee",
+            fontSize: 14,
+            minWidth: 160,
+          }}
+        >
+          {PAYMENT_METHOD_OPTIONS.map((opt) => (
+            <option key={opt.value || "all"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Search order ID, customer name, phone, sale name…"
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#252525",
+            color: "#eee",
+            fontSize: 14,
+            minWidth: 260,
+            flex: 1,
+            maxWidth: 360,
+          }}
+        />
+      </div>
 
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         {PAYMENT_COLUMNS.map(({ key, label }) => renderTable(label, ordersByStatus[key] ?? []))}
