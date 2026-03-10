@@ -718,7 +718,8 @@ export default function OrderDetailModal({
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
-                marginBottom: 16,
+                marginBottom: 5,
+                maxWidth: "67%",
               }}
             >
               <div>
