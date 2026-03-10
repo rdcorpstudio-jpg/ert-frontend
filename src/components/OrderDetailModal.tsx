@@ -137,6 +137,7 @@ export default function OrderDetailModal({
   const orderFreebies = detail?.order_freebies ?? [];
   const netTotal = detail?.net_total ?? 0;
   const productEditable = detail?.product_editable ?? false;
+  const saleName = (detail as { sale_name?: string | null })?.sale_name ?? (order as { sale_name?: string | null })?.sale_name ?? null;
 
   // Backend rule: shipping/customer editable only when status is Pending or Checked (manager can always edit on backend; we disable by status in UI)
   const orderStatus = order?.order_status ?? "";
@@ -703,6 +704,8 @@ export default function OrderDetailModal({
                 )}
               </div>
             )}
+            <div style={label}>Sale name</div>
+            <div style={{ ...value, marginBottom: 16 }}>{saleName ?? "—"}</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
               <div>
                 <div style={label}>Customer</div>
