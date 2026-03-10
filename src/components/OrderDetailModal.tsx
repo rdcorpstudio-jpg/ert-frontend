@@ -706,7 +706,7 @@ export default function OrderDetailModal({
                 {!hasUnreadAlerts && (userRole === "pack" || userRole === "manager") && allowedNextStatuses.length === 0 && (
                   <p style={{ fontSize: 12, color: "#9ca3af" }}>
                     {orderStatus === "Pending"
-                      ? "Order becomes Checked when accountant sets payment status to Checked. After that you can change to Packing, Shipped, etc."
+                      ? "รอทางบัญชีตรวจสอบการชำระเงิน"
                       : "No further status steps for this order."}
                   </p>
                 )}
