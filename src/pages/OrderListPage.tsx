@@ -433,7 +433,14 @@ export default function OrderListPage() {
                       </span>
                     </td>
                     <td style={td}>{rowData.customer_name ?? "-"}</td>
-                    <td style={td}>{rowData.order_status ?? "-"}</td>
+                    <td style={td}>
+                      {rowData.order_status === "Pending" && "⌛Pending"}
+                      {rowData.order_status === "Checked" && "✅Checked"}
+                      {rowData.order_status === "Packing" && "📦Packing"}
+                      {rowData.order_status === "Shipped" && "🚚Shipped"}
+                      {!["Pending", "Checked", "Packing", "Shipped"].includes(rowData.order_status) &&
+                        (rowData.order_status ?? "-")}
+                    </td>
                     <td style={td}>{rowData.payment_status ?? "-"}</td>
                     <td style={td} onClick={(e) => e.stopPropagation()}>
                       {rowData.tracking_number?.trim() ? (
