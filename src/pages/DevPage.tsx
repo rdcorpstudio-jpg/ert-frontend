@@ -138,24 +138,23 @@ export default function DevPage() {
   const handleDeleteOrders = async (e: React.FormEvent) => {
     e.preventDefault();
     const raw = orderIdsToDelete.trim().replace(/,/g, " ").split(/\s+/).filter(Boolean);
-    const ids = raw.map((s) => parseInt(s, 10)).filter((n) => Number.isInteger(n) && n > 0);
-    if (ids.length === 0) {
-      setDeleteMessage("Enter at least one order ID (numbers, comma or space separated).");
+    if (raw.length === 0) {
+      setDeleteMessage("Enter at least one order ID or order code (e.g. 123 or SG-26-03-08-00001).");
       return;
     }
-    if (!window.confirm(`Delete ${ids.length} order(s) (IDs: ${ids.join(", ")})? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ${raw.length} order(s) (${raw.join(", ")})? This cannot be undone.`)) return;
     setDeleteSubmitting(true);
     setDeleteMessage("");
     let ok = 0;
     let err: string[] = [];
-    for (const orderId of ids) {
+    for (const token of raw) {
       try {
-        await api.delete(`/orders/${orderId}`);
+        await api.delete(`/orders/${encodeURIComponent(token)}`);
         ok += 1;
       } catch (res: unknown) {
         const ax = res && typeof res === "object" && "response" in res ? (res as { response?: { status?: number; data?: { detail?: string } } }).response : undefined;
         const detail = ax?.data?.detail ?? "Unknown error";
-        err.push(`ID ${orderId}: ${detail}`);
+        err.push(`${token}: ${detail}`);
       }
     }
     setDeleteSubmitting(false);
@@ -281,12 +280,12 @@ export default function DevPage() {
         <p style={{ fontSize: 13, color: "#999", marginBottom: 12 }}>
           Permanently remove an order and all related data (items, freebies, payment, files, logs, alerts). Manager only.
         </p>
-        <label style={labelStyle}>Order ID(s)</label>
+        <label style={labelStyle}>Order ID or code</label>
         <input
           type="text"
           value={orderIdsToDelete}
           onChange={(e) => setOrderIdsToDelete(e.target.value)}
-          placeholder="e.g. 123 or 101, 102, 103"
+          placeholder="e.g. 123 or SG-26-03-08-00001 (comma/space for multiple)"
           style={inputStyle}
         />
         <button
