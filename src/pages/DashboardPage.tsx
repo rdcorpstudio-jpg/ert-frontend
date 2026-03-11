@@ -9,6 +9,10 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
 } from "recharts";
 
 type RevenueSummary = {
@@ -38,6 +42,8 @@ type SeriesKey =
   | "success"
   | "fail_return";
 
+type RevenueByProductItem = { name: string; revenue: number };
+
 function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
@@ -58,6 +64,8 @@ const CARD_KEYS: { key: SeriesKey; label: string; dataKey: keyof RevenueByDateIt
   { key: "fail_return", label: "❌ Fail + Return", dataKey: "fail_return_revenue" },
 ];
 
+const PIE_COLORS = ["#2563eb", "#22c55e", "#eab308", "#f97316", "#ec4899", "#8b5cf6", "#06b6d4", "#64748b"];
+
 export default function DashboardPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -68,6 +76,10 @@ export default function DashboardPage() {
   const [appliedFrom, setAppliedFrom] = useState("");
   const [appliedTo, setAppliedTo] = useState("");
   const [selectedCard, setSelectedCard] = useState<SeriesKey>("all");
+  const [revenueByCategory, setRevenueByCategory] = useState<RevenueByProductItem[]>([]);
+  const [revenueByProduct, setRevenueByProduct] = useState<RevenueByProductItem[]>([]);
+  const [revenueBySale, setRevenueBySale] = useState<RevenueByProductItem[]>([]);
+  const [pieChartMode, setPieChartMode] = useState<"category" | "product_name">("category");
 
   const role = getUserRole();
   const canAccess = role === "manager" || role === "account";
@@ -80,10 +92,20 @@ export default function DashboardPage() {
     if (to?.trim()) params.created_to = to.trim();
     const reqSummary = api.get<RevenueSummary>("/orders/revenue-summary", { params });
     const reqSeries = api.get<{ series: RevenueByDateItem[] }>("/orders/revenue-by-date", { params });
-    Promise.all([reqSummary, reqSeries])
-      .then(([resS, resD]) => {
+    const reqByCategory = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-product", {
+      params: { ...params, group_by: "category" },
+    });
+    const reqByProduct = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-product", {
+      params: { ...params, group_by: "product_name" },
+    });
+    const reqBySale = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-sale", { params });
+    Promise.all([reqSummary, reqSeries, reqByCategory, reqByProduct, reqBySale])
+      .then(([resS, resD, resCat, resProd, resSale]) => {
         setSummary(resS.data);
         setSeries(Array.isArray(resD.data?.series) ? resD.data.series : []);
+        setRevenueByCategory(Array.isArray(resCat.data?.items) ? resCat.data.items : []);
+        setRevenueByProduct(Array.isArray(resProd.data?.items) ? resProd.data.items : []);
+        setRevenueBySale(Array.isArray(resSale.data?.items) ? resSale.data.items : []);
         setAppliedFrom(from ?? "");
         setAppliedTo(to ?? "");
       })
@@ -277,6 +299,7 @@ export default function DashboardPage() {
       {loading ? (
         <p style={{ color: "#888" }}>Loading…</p>
       ) : summary ? (
+        <>
         <div style={{ display: "flex", gap: 24, alignItems: "flex-start", flexWrap: "wrap" }}>
           {/* Left: vertical cards */}
           <div
@@ -361,6 +384,163 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* Pie charts row: revenue by category/product name (left) and by sale name (right) */}
+        <div
+          style={{
+            marginTop: 24,
+            display: "flex",
+            gap: 24,
+            flexWrap: "wrap",
+            alignItems: "flex-start",
+          }}
+        >
+          {/* Left: revenue by category or product name */}
+          <div
+            style={{
+              flex: "1 1 320px",
+              minWidth: 280,
+              background: "#252525",
+              border: "1px solid #333",
+              borderRadius: 12,
+              padding: 16,
+              minHeight: 320,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                flexWrap: "wrap",
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              <span style={{ fontSize: 14, color: "#9ca3af" }}>
+                Revenue by {pieChartMode === "category" ? "product category" : "product name"}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setPieChartMode((m) => (m === "category" ? "product_name" : "category"))
+                }
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  border: "1px solid #555",
+                  background: pieChartMode === "category" ? "#333" : "#2563eb",
+                  color: "#eee",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                {pieChartMode === "category"
+                  ? "Show by product name"
+                  : "Show by category"}
+              </button>
+            </div>
+            {(() => {
+              const pieData = (pieChartMode === "category"
+                ? revenueByCategory
+                : revenueByProduct
+              )
+                .filter((d) => (d.revenue ?? 0) > 0)
+                .map((d) => ({ name: d.name, value: d.revenue }));
+              if (pieData.length === 0) {
+                return (
+                  <p style={{ color: "#666", padding: 24, margin: 0 }}>
+                    No revenue data in range
+                  </p>
+                );
+              }
+              return (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percent }) =>
+                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
+                      labelLine={{ stroke: "#888" }}
+                    >
+                      {pieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #444" }}
+                      formatter={(value: unknown) => [formatBath(Number(value ?? 0)), "Revenue"]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </div>
+
+          {/* Right: revenue by sale name */}
+          <div
+            style={{
+              flex: "1 1 320px",
+              minWidth: 280,
+              background: "#252525",
+              border: "1px solid #333",
+              borderRadius: 12,
+              padding: 16,
+              minHeight: 320,
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 16 }}>
+              Revenue by sale name
+            </div>
+            {(() => {
+              const salePieData = revenueBySale
+                .filter((d) => (d.revenue ?? 0) > 0)
+                .map((d) => ({ name: d.name, value: d.revenue }));
+              if (salePieData.length === 0) {
+                return (
+                  <p style={{ color: "#666", padding: 24, margin: 0 }}>
+                    No revenue data in range
+                  </p>
+                );
+              }
+              return (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={salePieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percent }) =>
+                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
+                      labelLine={{ stroke: "#888" }}
+                    >
+                      {salePieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #444" }}
+                      formatter={(value: unknown) => [formatBath(Number(value ?? 0)), "Revenue"]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </div>
+        </div>
+        </>
       ) : null}
     </div>
   );
