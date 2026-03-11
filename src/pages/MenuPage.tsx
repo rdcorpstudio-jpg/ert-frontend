@@ -201,22 +201,40 @@ export default function MenuPage() {
           </Link>
         )}
         {isManager && (
-          <Link
-            to="/dev"
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "#2a2a2a";
-              e.currentTarget.style.borderColor = "#2563eb";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "#252525";
-              e.currentTarget.style.borderColor = "#444";
-            }}
-          >
-            <span style={iconStyle}>⚙️</span>
-            <span style={labelStyle}>Dev</span>
-            <span style={descStyle}>Create product, category &amp; account (Manager only)</span>
-          </Link>
+          <>
+            <Link
+              to="/dev"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>⚙️</span>
+              <span style={labelStyle}>Dev</span>
+              <span style={descStyle}>Create product, category &amp; account (Manager only)</span>
+            </Link>
+            <Link
+              to="/line-notification-setup"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>💬</span>
+              <span style={labelStyle}>Line Notification</span>
+              <span style={descStyle}>Setup per product category (Manager only)</span>
+            </Link>
+          </>
         )}
       </div>
     </div>

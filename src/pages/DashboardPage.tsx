@@ -22,6 +22,12 @@ type RevenueSummary = {
   success_revenue: number;
   fail_return_revenue: number;
   total_revenue: number;
+  pending_product_count: number;
+  checked_product_count: number;
+  packing_shipping_product_count: number;
+  success_product_count: number;
+  fail_return_product_count: number;
+  total_product_count: number;
 };
 
 type RevenueByDateItem = {
@@ -126,6 +132,44 @@ export default function DashboardPage() {
     setDateFrom("");
     setDateTo("");
     fetchData();
+  };
+
+  const formatDate = (d: Date): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const setQuickRange = (days: number) => {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const start = new Date(end);
+    start.setDate(end.getDate() - (days - 1));
+    const fromStr = formatDate(start);
+    const toStr = formatDate(end);
+    setDateFrom(fromStr);
+    setDateTo(toStr);
+    fetchData(fromStr, toStr);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const s = formatDate(d);
+    setDateFrom(s);
+    setDateTo(s);
+    fetchData(s, s);
+  };
+
+  const handleYesterday = () => {
+    const today = new Date();
+    const y = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    y.setDate(y.getDate() - 1);
+    const s = formatDate(y);
+    setDateFrom(s);
+    setDateTo(s);
+    fetchData(s, s);
   };
 
   if (!localStorage.getItem("token")) return <Navigate to="/login" replace />;
@@ -275,6 +319,81 @@ export default function DashboardPage() {
         >
           All time
         </button>
+        <button
+          type="button"
+          onClick={handleToday}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          onClick={handleYesterday}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(7)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          7 days
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(14)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          14 days
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(30)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          30 days
+        </button>
         {(appliedFrom || appliedTo) && (
           <span style={{ fontSize: 13, color: "#9ca3af" }}>
             {appliedFrom || "…"} – {appliedTo || "…"}
@@ -315,6 +434,20 @@ export default function DashboardPage() {
                 key === "all"
                   ? summary.total_revenue
                   : summary[dataKey as keyof RevenueSummary] ?? 0;
+              let productCount = 0;
+              if (key === "all") {
+                productCount = summary.total_product_count ?? 0;
+              } else if (key === "pending") {
+                productCount = summary.pending_product_count ?? 0;
+              } else if (key === "checked") {
+                productCount = summary.checked_product_count ?? 0;
+              } else if (key === "packing_shipping") {
+                productCount = summary.packing_shipping_product_count ?? 0;
+              } else if (key === "success") {
+                productCount = summary.success_product_count ?? 0;
+              } else if (key === "fail_return") {
+                productCount = summary.fail_return_product_count ?? 0;
+              }
               const isSelected = selectedCard === key;
               return (
                 <div
@@ -331,7 +464,12 @@ export default function DashboardPage() {
                 >
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
                     <span style={{ ...labelStyle, marginBottom: 0 }}>{label}</span>
-                    <span style={valueStyle}>{formatBath(value)}</span>
+                    <span style={valueStyle}>
+                      {formatBath(value)}
+                      <span style={{ fontSize: 12, color: "#9ca3af", marginLeft: 8 }}>
+                        {productCount.toLocaleString("th-TH")} pcs
+                      </span>
+                    </span>
                   </div>
                 </div>
               );
