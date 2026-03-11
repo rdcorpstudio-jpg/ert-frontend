@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import api from "../services/api"; 
+import { Link, useNavigate, Navigate } from "react-router-dom";
+import api from "../services/api";
+
+function getUserRole(): string {
+  try {
+    const token = localStorage.getItem("token");
+    if (!token) return "";
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return (payload?.role as string) ?? "";
+  } catch {
+    return "";
+  }
+}
 
 type ProductFreebie = {
   id: number;
@@ -21,6 +32,8 @@ type OrderItemForm = {
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
+  const role = getUserRole();
+  if (role !== "sale" && role !== "manager") return <Navigate to="/menu" replace />;
 
   const token = localStorage.getItem("token");
   const payload = token ? JSON.parse(atob(token.split(".")[1])) : null;

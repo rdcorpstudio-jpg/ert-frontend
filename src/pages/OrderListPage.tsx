@@ -109,18 +109,10 @@ export default function OrderListPage() {
       return "";
     }
   };
-  const canUsePackingShortcut = (() => {
-    const role = getUserRole();
-    return role === "pack" || role === "manager";
-  })();
-  const canAccessAccountant = (() => {
-    const role = getUserRole();
-    return role === "account" || role === "manager";
-  })();
-  const canAccessTracking = (() => {
-    const role = getUserRole();
-    return role === "pack" || role === "manager";
-  })();
+  const role = getUserRole();
+  const canUsePackingShortcut = role === "pack" || role === "manager";
+  const canAccessAccountant = role === "account" || role === "manager";
+  const canAccessTracking = role === "pack" || role === "manager";
 
   const navigate = useNavigate();
   const handlePackingShortcut = () => {
@@ -246,15 +238,17 @@ export default function OrderListPage() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <h1 style={{ margin: 0, fontSize: 24 }}>Order List</h1>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Link
-            to="/orders/create"
-            style={{
-              ...btnPrimaryStyle,
-              textDecoration: "none",
-            }}
-          >
-            + Create Order
-          </Link>
+          {(role === "sale" || role === "manager") && (
+            <Link
+              to="/orders/create"
+              style={{
+                ...btnPrimaryStyle,
+                textDecoration: "none",
+              }}
+            >
+              + Create Order
+            </Link>
+          )}
           {canAccessAccountant && (
             <>
               <Link
