@@ -374,14 +374,10 @@ export default function CreateOrderPage() {
         <div style={{ marginBottom: 10 }}>
           <label style={labelStyle}>📍 ที่อยู่จัดส่ง</label>
           <textarea
-            
-            rows={4}
+            rows={3}
             value={addressText}
             onChange={(e) => setAddressText(e.target.value)}
-            
-            placeholder="ชื่อลูกค้า 
-ที่อยู่ 
-เบอร์โทร"
+            placeholder="ชื่อลูกค้า / ที่อยู่ / เบอร์โทร (กรอกกี่บรรทัดก็ได้)"
             style={inputStyle}
           />
           <button style={secondaryButton} onClick={extractNamePhone}>
