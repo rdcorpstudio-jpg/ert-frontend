@@ -15,7 +15,12 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    const status = err.response?.status;
+    const detail = (err.response?.data?.detail ?? "").toString().toLowerCase();
+    const isAuthError =
+      status === 401 ||
+      (status === 403 && (detail.includes("not authenticated") || detail.includes("invalid token")));
+    if (isAuthError) {
       localStorage.removeItem("token");
       window.location.href = "/login";
     }
