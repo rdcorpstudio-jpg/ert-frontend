@@ -265,6 +265,13 @@ export default function CreateOrderPage() {
         await uploadFile(invoiceFile, "invoice");
       }
 
+      // Notify LINE after everything succeeded (order, items, payment, files).
+      try {
+        await api.post(`/orders/${orderId}/notify-created`);
+      } catch {
+        // ถ้าแจ้งเตือนไม่สำเร็จ ไม่ต้อง block การสร้างออเดอร์
+      }
+
       alert("สร้างออเดอร์สำเร็จ");
       setIsUploading(false);
       navigate("/orders");
