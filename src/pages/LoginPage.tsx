@@ -8,10 +8,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [backendDown, setBackendDown] = useState(false);
 
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
+    setBackendDown(false);
     setLoading(true);
     try {
       const formData = new URLSearchParams();
@@ -26,8 +28,15 @@ export default function LoginPage() {
 
       localStorage.setItem("token", res.data.access_token);
       navigate("/menu");
-    } catch {
-      setError("Login failed. Please check your email and password.");
+    } catch (err: unknown) {
+      const anyErr = err as { response?: { status?: number }; message?: string };
+      // If there is no HTTP response at all, assume backend is unreachable / maintenance.
+      if (!anyErr || !("response" in anyErr) || !anyErr.response) {
+        setBackendDown(true);
+        setError("ระบบกำลังปิดปรับปรุง ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้ในขณะนี้.");
+      } else {
+        setError("Login failed. Please check your email and password.");
+      }
     } finally {
       setLoading(false);
     }
@@ -122,6 +131,9 @@ export default function LoginPage() {
     <div style={pageStyle}>
       <div style={cardStyle}>
         <h1 style={titleStyle}>SG ERP System</h1>
+        {backendDown && (
+          <p style={{ ...subtitleStyle, color: "#f97373" }}>ระบบกำลังปิดปรับปรุง</p>
+        )}
         <p style={subtitleStyle}>Sign in to continue</p>
         <div style={{ textAlign: "center" }}>
           <img
