@@ -8,6 +8,7 @@ import DevPage from "./pages/DevPage";
 import AccountantPage from "./pages/AccountantPage";
 import TrackingNumberPage from "./pages/TrackingNumberPage";
 import InvoiceSubmitPage from "./pages/InvoiceSubmitPage";
+import DashboardPage from "./pages/DashboardPage";
 
 export default function AppRouter() {
   return (
@@ -16,6 +17,7 @@ export default function AppRouter() {
         <Route path="/" element={<Navigate to="/login" />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/menu" element={<MenuPage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/packing" element={<PackingPage />} />
         <Route path="/orders/tracking" element={<TrackingNumberPage />} />

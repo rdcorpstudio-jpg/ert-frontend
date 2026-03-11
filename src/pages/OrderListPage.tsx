@@ -271,6 +271,13 @@ export default function OrderListPage() {
               >
                 📄 Invoice Submit
               </Link>
+              <Link
+                to="/dashboard"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                title="Revenue by status dashboard"
+              >
+                📊 Dashboard
+              </Link>
             </>
           )}
           {canAccessTracking && (
@@ -294,6 +301,13 @@ export default function OrderListPage() {
           <button type="button" onClick={() => fetchOrders()} style={btnStyle} title="Reload list">
             🔄 Refresh
           </button>
+          <Link
+            to="/menu"
+            style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+            title="Back to menu"
+          >
+            ← Menu
+          </Link>
           <button type="button" onClick={handleLogout} style={{ ...btnStyle, color: "#f87171" }} title="Sign out">
             Logout
           </button>

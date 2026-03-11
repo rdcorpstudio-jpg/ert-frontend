@@ -113,6 +113,22 @@ export default function MenuPage() {
         {canAccessAccountant && (
           <>
             <Link
+              to="/dashboard"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>📊</span>
+              <span style={labelStyle}>Dashboard</span>
+              <span style={descStyle}>Revenue by status</span>
+            </Link>
+            <Link
               to="/orders/accountant"
               style={cardStyle}
               onMouseOver={(e) => {
