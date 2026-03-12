@@ -747,6 +747,7 @@ export default function SaleSummaryPage() {
                 style={{
                   ...cardStyle,
                   minWidth: 260,
+                  justifyContent: "flex-start",
                 }}
               >
                 <div
@@ -794,6 +795,7 @@ export default function SaleSummaryPage() {
                 style={{
                   ...cardStyle,
                   minWidth: 260,
+                  justifyContent: "flex-start",
                 }}
               >
                 <div
@@ -841,6 +843,7 @@ export default function SaleSummaryPage() {
                 style={{
                   ...cardStyle,
                   minWidth: 260,
+                  justifyContent: "flex-start",
                 }}
               >
                 <div
