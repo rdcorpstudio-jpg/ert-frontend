@@ -68,6 +68,7 @@ export default function AccountantPage() {
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportOrderStatus, setExportOrderStatus] = useState("");
+  const [exportPaymentStatus, setExportPaymentStatus] = useState("");
 
   const role = getUserRole();
   const canAccess = role === "account" || role === "manager";
@@ -503,6 +504,31 @@ export default function AccountantPage() {
                   ))}
                 </select>
               </label>
+
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Payment status:
+                <select
+                  value={exportPaymentStatus}
+                  onChange={(e) => setExportPaymentStatus(e.target.value)}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #4b5563",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 13,
+                  }}
+                >
+                  <option value="">All</option>
+                  <option value="Unchecked">Unchecked</option>
+                  <option value="Checked">Checked</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Received">Received</option>
+                  <option value="Unmatched">Unmatched</option>
+                </select>
+              </label>
             </div>
 
             <div
@@ -545,6 +571,7 @@ export default function AccountantPage() {
                     if (exportSaleId) params.sale_id = exportSaleId;
                     if (exportPaymentMethod) params.payment_method = exportPaymentMethod;
                     if (exportOrderStatus) params.order_status = exportOrderStatus;
+                     if (exportPaymentStatus) params.payment_status = exportPaymentStatus;
 
                     const res = await api.post<ArrayBuffer>(
                       "/orders/export-orders",
