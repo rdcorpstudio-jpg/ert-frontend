@@ -10,6 +10,7 @@ import TrackingNumberPage from "./pages/TrackingNumberPage";
 import InvoiceSubmitPage from "./pages/InvoiceSubmitPage";
 import DashboardPage from "./pages/DashboardPage";
 import LineNotificationSetupPage from "./pages/LineNotificationSetupPage";
+import SaleSummaryPage from "./pages/SaleSummaryPage";
 
 export default function AppRouter() {
   return (
@@ -19,6 +20,7 @@ export default function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/menu" element={<MenuPage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/sale-summary" element={<SaleSummaryPage />} />
         <Route path="/line-notification-setup" element={<LineNotificationSetupPage />} />
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/packing" element={<PackingPage />} />

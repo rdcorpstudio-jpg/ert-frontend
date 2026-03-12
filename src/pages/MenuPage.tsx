@@ -96,6 +96,24 @@ export default function MenuPage() {
             <span style={descStyle}>Create a new order</span>
           </Link>
         )}
+        {(role === "sale" || role === "manager") && (
+          <Link
+            to="/sale-summary"
+            style={cardStyle}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = "#2a2a2a";
+              e.currentTarget.style.borderColor = "#2563eb";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = "#252525";
+              e.currentTarget.style.borderColor = "#444";
+            }}
+          >
+            <span style={iconStyle}>📈</span>
+            <span style={labelStyle}>Sale Summary</span>
+            <span style={descStyle}>ยอดขายตามพนักงานขาย</span>
+          </Link>
+        )}
         <Link
           to="/orders"
           style={cardStyle}
