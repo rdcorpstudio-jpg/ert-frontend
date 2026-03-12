@@ -7,6 +7,8 @@ type RevenueBySaleItem = {
   name: string;
   revenue: number;
   order_count?: number;
+  prev_revenue?: number;
+  delta_pct?: number;
 };
 
 type BreakdownItem = {
@@ -48,6 +50,7 @@ export default function SaleSummaryPage() {
   const [categoryBreakdown, setCategoryBreakdown] = useState<BreakdownItem[]>([]);
   const [pageBreakdown, setPageBreakdown] = useState<BreakdownItem[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<StatusBreakdownItem[]>([]);
+  const [topProducts, setTopProducts] = useState<BreakdownItem[]>([]);
 
   const formatBath = (n: number) =>
     `฿${n.toLocaleString("th-TH", {
@@ -59,88 +62,197 @@ export default function SaleSummaryPage() {
     const params: Record<string, string | number> = { sale_id: saleId };
     if (from?.trim()) params.created_from = from.trim();
     if (to?.trim()) params.created_to = to.trim();
-    api
-      .get<{
-        categories: BreakdownItem[];
-        pages: BreakdownItem[];
-        statuses: StatusBreakdownItem[];
-      }>(
-        "/orders/revenue-by-sale-breakdown",
-        { params }
-      )
-      .then((res) => {
+    const breakdownReq = api.get<{
+      categories: BreakdownItem[];
+      pages: BreakdownItem[];
+      statuses: StatusBreakdownItem[];
+    }>("/orders/revenue-by-sale-breakdown", { params });
+
+    const topProductsReq = api.get<{ items: BreakdownItem[] }>(
+      "/orders/revenue-by-product",
+      {
+        params: {
+          created_from: from?.trim() || undefined,
+          created_to: to?.trim() || undefined,
+          group_by: "product_name",
+          sale_id: saleId,
+        },
+      }
+    );
+
+    Promise.all([breakdownReq, topProductsReq])
+      .then(([resB, resP]) => {
         setCategoryBreakdown(
-          Array.isArray(res.data?.categories) ? res.data.categories : []
+          Array.isArray(resB.data?.categories) ? resB.data.categories : []
         );
-        setPageBreakdown(Array.isArray(res.data?.pages) ? res.data.pages : []);
+        setPageBreakdown(
+          Array.isArray(resB.data?.pages) ? resB.data.pages : []
+        );
         setStatusBreakdown(
-          Array.isArray(res.data?.statuses) ? res.data.statuses : []
+          Array.isArray(resB.data?.statuses) ? resB.data.statuses : []
         );
+        const items = Array.isArray(resP.data?.items) ? resP.data.items : [];
+        // sort by revenue desc and keep top 5
+        const sorted = [...items].sort(
+          (a, b) => (b.revenue || 0) - (a.revenue || 0)
+        );
+        setTopProducts(sorted.slice(0, 5));
       })
       .catch(() => {
         setCategoryBreakdown([]);
         setPageBreakdown([]);
         setStatusBreakdown([]);
+        setTopProducts([]);
       });
   };
 
   const fetchData = (from?: string, to?: string) => {
     setLoading(true);
     setError(null);
-    const params: Record<string, string> = {};
-    if (from?.trim()) params.created_from = from.trim();
-    if (to?.trim()) params.created_to = to.trim();
-    api
-      .get<{ items: RevenueBySaleItem[] }>("/orders/revenue-by-sale", {
-        params,
-      })
-      .then((res) => {
-        const list = Array.isArray(res.data?.items) ? res.data.items : [];
-        setItems(list);
-        // For manager, keep current selection if still exists; otherwise default
-        if (role === "manager") {
-          let targetName = selectedSaleName;
-          if (
-            targetName &&
-            !list.some((it) => it.name === targetName)
-          ) {
-            targetName = null;
-          }
-          if (!targetName && list.length > 0) {
-            targetName = list[0].name;
-          }
-          setSelectedSaleName(targetName);
-          // When manager focuses a single sale, also fetch its breakdown
-          if (targetName) {
-            const target = list.find((it) => it.name === targetName);
-            if (target?.sale_id != null) {
-              fetchBreakdown(target.sale_id, from, to);
-            } else {
-              setCategoryBreakdown([]);
-              setPageBreakdown([]);
-              setStatusBreakdown([]);
-            }
-          } else {
-            setCategoryBreakdown([]);
-            setPageBreakdown([]);
-            setStatusBreakdown([]);
-          }
-        } else if (role === "sale") {
-          // For sale, there should only be their own row
-          if (list.length > 0) {
-            setSelectedSaleName(list[0].name);
-          }
-          if (currentSaleId != null) {
-            fetchBreakdown(currentSaleId, from, to);
-          } else {
-            setCategoryBreakdown([]);
-            setPageBreakdown([]);
-            setStatusBreakdown([]);
-          }
+    const baseParams: Record<string, string> = {};
+    if (from?.trim()) baseParams.created_from = from.trim();
+    if (to?.trim()) baseParams.created_to = to.trim();
+
+    const hasRange = !!(from && to);
+
+    // Helper to apply selection + breakdown logic on the final list
+    const applySelectionAndBreakdown = (list: RevenueBySaleItem[]) => {
+      setItems(list);
+      if (role === "manager") {
+        let targetName = selectedSaleName;
+        if (targetName && !list.some((it) => it.name === targetName)) {
+          targetName = null;
         }
-      })
-      .catch(() => setError("Failed to load sale summary."))
-      .finally(() => setLoading(false));
+        if (!targetName && list.length > 0) {
+          targetName = list[0].name;
+        }
+        setSelectedSaleName(targetName);
+        if (targetName) {
+          const target = list.find((it) => it.name === targetName);
+          if (target?.sale_id != null) {
+            fetchBreakdown(target.sale_id, from, to);
+          } else {
+            setCategoryBreakdown([]);
+            setPageBreakdown([]);
+            setStatusBreakdown([]);
+            setTopProducts([]);
+          }
+        } else {
+          setCategoryBreakdown([]);
+          setPageBreakdown([]);
+          setStatusBreakdown([]);
+          setTopProducts([]);
+        }
+      } else if (role === "sale") {
+        if (list.length > 0) {
+          setSelectedSaleName(list[0].name);
+        }
+        if (currentSaleId != null) {
+          fetchBreakdown(currentSaleId, from, to);
+        } else {
+          setCategoryBreakdown([]);
+          setPageBreakdown([]);
+          setStatusBreakdown([]);
+          setTopProducts([]);
+        }
+      }
+    };
+
+    // If we have a concrete range, also fetch previous period to compute delta
+    if (hasRange) {
+      try {
+        const fromDate = new Date(from as string);
+        const toDate = new Date(to as string);
+        if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+          throw new Error("Invalid date");
+        }
+        const diffMs = toDate.getTime() - fromDate.getTime();
+        const days = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+        const prevTo = new Date(fromDate);
+        prevTo.setDate(prevTo.getDate() - 1);
+        const prevFrom = new Date(prevTo);
+        prevFrom.setDate(prevFrom.getDate() - (days - 1));
+
+        const formatDateLocal = (d: Date) => {
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, "0");
+          const day = String(d.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        };
+
+        const curParams = { ...baseParams };
+        const prevParams: Record<string, string> = {
+          created_from: formatDateLocal(prevFrom),
+          created_to: formatDateLocal(prevTo),
+        };
+
+        const curReq = api.get<{ items: RevenueBySaleItem[] }>(
+          "/orders/revenue-by-sale",
+          { params: curParams }
+        );
+        const prevReq = api.get<{ items: RevenueBySaleItem[] }>(
+          "/orders/revenue-by-sale",
+          { params: prevParams }
+        );
+
+        Promise.all([curReq, prevReq])
+          .then(([curRes, prevRes]) => {
+            const curList = Array.isArray(curRes.data?.items)
+              ? curRes.data.items
+              : [];
+            const prevList = Array.isArray(prevRes.data?.items)
+              ? prevRes.data.items
+              : [];
+
+            const prevMap = new Map<string | number, number>();
+            prevList.forEach((p) => {
+              const key = p.sale_id ?? p.name;
+              prevMap.set(key, p.revenue ?? 0);
+            });
+
+            const merged: RevenueBySaleItem[] = curList.map((c) => {
+              const key = c.sale_id ?? c.name;
+              const prev = prevMap.get(key) ?? 0;
+              const delta =
+                prev > 0 ? ((c.revenue ?? 0) - prev) / prev * 100 : undefined;
+              return {
+                ...c,
+                prev_revenue: prev,
+                delta_pct:
+                  delta !== undefined && isFinite(delta) ? delta : undefined,
+              };
+            });
+
+            applySelectionAndBreakdown(merged);
+          })
+          .catch(() => setError("Failed to load sale summary."))
+          .finally(() => setLoading(false));
+      } catch {
+        // Fallback: single-period fetch if date parsing failed
+        api
+          .get<{ items: RevenueBySaleItem[] }>("/orders/revenue-by-sale", {
+            params: baseParams,
+          })
+          .then((res) => {
+            const list = Array.isArray(res.data?.items) ? res.data.items : [];
+            applySelectionAndBreakdown(list);
+          })
+          .catch(() => setError("Failed to load sale summary."))
+          .finally(() => setLoading(false));
+      }
+    } else {
+      // No specific range: just fetch once without comparison
+      api
+        .get<{ items: RevenueBySaleItem[] }>("/orders/revenue-by-sale", {
+          params: baseParams,
+        })
+        .then((res) => {
+          const list = Array.isArray(res.data?.items) ? res.data.items : [];
+          applySelectionAndBreakdown(list);
+        })
+        .catch(() => setError("Failed to load sale summary."))
+        .finally(() => setLoading(false));
+    }
   };
 
   useEffect(() => {
@@ -590,6 +702,7 @@ export default function SaleSummaryPage() {
                     style={{
                       fontSize: 11,
                       color: "#9ca3af",
+                      marginBottom: 2,
                     }}
                   >
                     Total orders:{" "}
@@ -597,6 +710,25 @@ export default function SaleSummaryPage() {
                       {(it.order_count ?? 0).toLocaleString("th-TH")}
                     </span>
                   </div>
+                  {typeof it.delta_pct === "number" && (
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color:
+                          it.delta_pct > 0
+                            ? "#4ade80"
+                            : it.delta_pct < 0
+                            ? "#f97373"
+                            : "#9ca3af",
+                      }}
+                    >
+                      เทียบช่วงก่อนหน้า:{" "}
+                      <span style={{ fontWeight: 600 }}>
+                        {it.delta_pct > 0 ? "+" : ""}
+                        {it.delta_pct.toFixed(1)}%
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -651,6 +783,53 @@ export default function SaleSummaryPage() {
                         <span>{c.name || "—"}</span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(c.revenue ?? 0)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div
+                style={{
+                  ...cardStyle,
+                  minWidth: 260,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#e5e7eb",
+                    marginBottom: 8,
+                  }}
+                >
+                  Top products
+                </div>
+                {topProducts.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>—</div>
+                ) : (
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: 0,
+                      fontSize: 12,
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    {topProducts.map((p) => (
+                      <li
+                        key={p.name || "-"}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span>{p.name || "—"}</span>
+                        <span style={{ color: "#fbbf24" }}>
+                          {formatBath(p.revenue ?? 0)}
                         </span>
                       </li>
                     ))}
