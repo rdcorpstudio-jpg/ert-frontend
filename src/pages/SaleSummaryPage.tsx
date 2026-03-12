@@ -6,11 +6,18 @@ type RevenueBySaleItem = {
   sale_id?: number;
   name: string;
   revenue: number;
+  order_count?: number;
 };
 
 type BreakdownItem = {
   name: string;
   revenue: number;
+};
+
+type StatusBreakdownItem = {
+  status: string;
+  revenue: number;
+  order_count: number;
 };
 
 function getUserRole(): string {
@@ -40,6 +47,7 @@ export default function SaleSummaryPage() {
   const [selectedSaleName, setSelectedSaleName] = useState<string | null>(null);
   const [categoryBreakdown, setCategoryBreakdown] = useState<BreakdownItem[]>([]);
   const [pageBreakdown, setPageBreakdown] = useState<BreakdownItem[]>([]);
+  const [statusBreakdown, setStatusBreakdown] = useState<StatusBreakdownItem[]>([]);
 
   const formatBath = (n: number) =>
     `฿${n.toLocaleString("th-TH", {
@@ -52,7 +60,11 @@ export default function SaleSummaryPage() {
     if (from?.trim()) params.created_from = from.trim();
     if (to?.trim()) params.created_to = to.trim();
     api
-      .get<{ categories: BreakdownItem[]; pages: BreakdownItem[] }>(
+      .get<{
+        categories: BreakdownItem[];
+        pages: BreakdownItem[];
+        statuses: StatusBreakdownItem[];
+      }>(
         "/orders/revenue-by-sale-breakdown",
         { params }
       )
@@ -60,13 +72,15 @@ export default function SaleSummaryPage() {
         setCategoryBreakdown(
           Array.isArray(res.data?.categories) ? res.data.categories : []
         );
-        setPageBreakdown(
-          Array.isArray(res.data?.pages) ? res.data.pages : []
+        setPageBreakdown(Array.isArray(res.data?.pages) ? res.data.pages : []);
+        setStatusBreakdown(
+          Array.isArray(res.data?.statuses) ? res.data.statuses : []
         );
       })
       .catch(() => {
         setCategoryBreakdown([]);
         setPageBreakdown([]);
+        setStatusBreakdown([]);
       });
   };
 
@@ -104,10 +118,12 @@ export default function SaleSummaryPage() {
             } else {
               setCategoryBreakdown([]);
               setPageBreakdown([]);
+              setStatusBreakdown([]);
             }
           } else {
             setCategoryBreakdown([]);
             setPageBreakdown([]);
+            setStatusBreakdown([]);
           }
         } else if (role === "sale") {
           // For sale, there should only be their own row
@@ -119,6 +135,7 @@ export default function SaleSummaryPage() {
           } else {
             setCategoryBreakdown([]);
             setPageBreakdown([]);
+            setStatusBreakdown([]);
           }
         }
       })
@@ -139,6 +156,44 @@ export default function SaleSummaryPage() {
     setDateFrom("");
     setDateTo("");
     fetchData();
+  };
+
+  const formatDate = (d: Date): string => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const setQuickRange = (days: number) => {
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const start = new Date(end);
+    start.setDate(end.getDate() - (days - 1));
+    const fromStr = formatDate(start);
+    const toStr = formatDate(end);
+    setDateFrom(fromStr);
+    setDateTo(toStr);
+    fetchData(fromStr, toStr);
+  };
+
+  const handleToday = () => {
+    const today = new Date();
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const s = formatDate(d);
+    setDateFrom(s);
+    setDateTo(s);
+    fetchData(s, s);
+  };
+
+  const handleYesterday = () => {
+    const today = new Date();
+    const y = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    y.setDate(y.getDate() - 1);
+    const s = formatDate(y);
+    setDateFrom(s);
+    setDateTo(s);
+    fetchData(s, s);
   };
 
   if (!localStorage.getItem("token")) return <Navigate to="/login" replace />;
@@ -320,6 +375,81 @@ export default function SaleSummaryPage() {
         >
           All time
         </button>
+        <button
+          type="button"
+          onClick={handleToday}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          Today
+        </button>
+        <button
+          type="button"
+          onClick={handleYesterday}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          Yesterday
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(7)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          7 days
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(14)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          14 days
+        </button>
+        <button
+          type="button"
+          onClick={() => setQuickRange(30)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#333",
+            color: "#eee",
+            fontSize: 13,
+            cursor: "pointer",
+          }}
+        >
+          30 days
+        </button>
         {role === "manager" && items.length > 0 && (
           <>
             <span style={{ color: "#aaa", fontSize: 14, marginLeft: 8 }}>
@@ -340,6 +470,7 @@ export default function SaleSummaryPage() {
                 } else {
                   setCategoryBreakdown([]);
                   setPageBreakdown([]);
+                  setStatusBreakdown([]);
                 }
               }}
               style={{
@@ -450,9 +581,21 @@ export default function SaleSummaryPage() {
                       fontSize: 24,
                       fontWeight: 700,
                       color: "#fbbf24",
+                      marginBottom: 6,
                     }}
                   >
                     {formatBath(it.revenue ?? 0)}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#9ca3af",
+                    }}
+                  >
+                    Total orders:{" "}
+                    <span style={{ color: "#e5e7eb", fontWeight: 600 }}>
+                      {(it.order_count ?? 0).toLocaleString("th-TH")}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -555,6 +698,58 @@ export default function SaleSummaryPage() {
                         <span>{p.name || "—"}</span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(p.revenue ?? 0)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div
+                style={{
+                  ...cardStyle,
+                  minWidth: 260,
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#e5e7eb",
+                    marginBottom: 8,
+                  }}
+                >
+                  By status
+                </div>
+                {statusBreakdown.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>—</div>
+                ) : (
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: 0,
+                      fontSize: 12,
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    {statusBreakdown.map((s) => (
+                      <li
+                        key={s.status || "-"}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span>
+                          {s.status || "—"}{" "}
+                          <span style={{ color: "#9ca3af" }}>
+                            ({s.order_count.toLocaleString("th-TH")} orders)
+                          </span>
+                        </span>
+                        <span style={{ color: "#fbbf24" }}>
+                          {formatBath(s.revenue ?? 0)}
                         </span>
                       </li>
                     ))}
