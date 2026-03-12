@@ -283,15 +283,25 @@ export default function OrderListPage() {
               🔢 Tracking
             </Link>
           )}
-          <button
-            type="button"
-            onClick={handlePackingShortcut}
-            disabled={!canUsePackingShortcut}
-            style={canUsePackingShortcut ? btnPrimaryStyle : { ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
-            title={canUsePackingShortcut ? "Today’s packing: shipping date = today, order status = Checked" : "Pack or Manager only"}
-          >
-            📦 Packing
-          </button>
+          {role === "sale" ? (
+            <Link
+              to="/sale-summary"
+              style={{ ...btnPrimaryStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              title="Sale Summary"
+            >
+              📈 Sale Summary
+            </Link>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePackingShortcut}
+              disabled={!canUsePackingShortcut}
+              style={canUsePackingShortcut ? btnPrimaryStyle : { ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
+              title={canUsePackingShortcut ? "Today’s packing: shipping date = today, order status = Checked" : "Pack or Manager only"}
+            >
+              📦 Packing
+            </button>
+          )}
           <button type="button" onClick={() => fetchOrders()} style={btnStyle} title="Reload list">
             🔄 Refresh
           </button>
