@@ -546,10 +546,14 @@ export default function AccountantPage() {
                     if (exportPaymentMethod) params.payment_method = exportPaymentMethod;
                     if (exportOrderStatus) params.order_status = exportOrderStatus;
 
-                    const res = await api.get<ArrayBuffer>("/orders/export-orders", {
-                      params,
-                      responseType: "arraybuffer",
-                    });
+                    const res = await api.post<ArrayBuffer>(
+                      "/orders/export-orders",
+                      null,
+                      {
+                        params,
+                        responseType: "arraybuffer",
+                      }
+                    );
 
                     const blob = new Blob([res.data], {
                       type:
