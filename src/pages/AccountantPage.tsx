@@ -22,6 +22,11 @@ type OrderRow = {
   payment_status: string;
 };
 
+type SaleOption = {
+  sale_id: number;
+  name: string;
+};
+
 const PAYMENT_COLUMNS = [
   { key: "Unchecked", label: "Unchecked" },
   { key: "Checked", label: "Checked" },
@@ -54,6 +59,15 @@ export default function AccountantPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [sales, setSales] = useState<SaleOption[]>([]);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportSaleId, setExportSaleId] = useState<string>("");
+  const [exportPaymentMethod, setExportPaymentMethod] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportOrderStatus, setExportOrderStatus] = useState("");
 
   const role = getUserRole();
   const canAccess = role === "account" || role === "manager";
@@ -87,6 +101,23 @@ export default function AccountantPage() {
     const t = setTimeout(() => fetchAll(), keyword ? 300 : 0);
     return () => clearTimeout(t);
   }, [paymentMethodFilter, keyword]);
+
+  useEffect(() => {
+    if (!canAccess) return;
+    // Load sale list for export filter
+    api
+      .get<{ items: { sale_id?: number; name: string; revenue: number }[] }>(
+        "/orders/revenue-by-sale"
+      )
+      .then((res) => {
+        const list = Array.isArray(res.data?.items) ? res.data.items : [];
+        const opts: SaleOption[] = list
+          .filter((it) => it.sale_id != null)
+          .map((it) => ({ sale_id: it.sale_id as number, name: it.name || "-" }));
+        setSales(opts);
+      })
+      .catch(() => setSales([]));
+  }, [canAccess]);
 
   const openDetail = async (orderId: number) => {
     setSelectedOrderId(orderId);
@@ -240,6 +271,24 @@ export default function AccountantPage() {
           >
             Menu
           </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setExportError(null);
+              setExportOpen(true);
+            }}
+            style={{
+              padding: "8px 14px",
+              borderRadius: 6,
+              border: "1px solid #2563eb",
+              background: "#2563eb",
+              color: "#fff",
+              fontSize: 14,
+              cursor: "pointer",
+            }}
+          >
+            Export
+          </button>
         </div>
       </div>
 
@@ -292,6 +341,255 @@ export default function AccountantPage() {
       <div style={{ display: "flex", gap: 16, flexWrap: "wrap", alignItems: "flex-start" }}>
         {PAYMENT_COLUMNS.map(({ key, label }) => renderTable(label, ordersByStatus[key] ?? []))}
       </div>
+
+      {exportOpen && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 50,
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: 480,
+              background: "#111827",
+              borderRadius: 12,
+              border: "1px solid #374151",
+              padding: 20,
+              color: "#eee",
+            }}
+          >
+            <h2 style={{ marginTop: 0, marginBottom: 12, fontSize: 18 }}>
+              Export orders to Excel
+            </h2>
+            <p style={{ marginTop: 0, marginBottom: 16, fontSize: 13, color: "#9ca3af" }}>
+              เลือกช่วงวันที่สร้างออเดอร์, พนักงานขาย และช่องทางชำระเงินที่ต้องการ Export.
+            </p>
+
+            {exportError && (
+              <div
+                style={{
+                  padding: 8,
+                  marginBottom: 10,
+                  background: "#3b0000",
+                  color: "#fcc",
+                  borderRadius: 6,
+                  fontSize: 13,
+                }}
+              >
+                {exportError}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                marginBottom: 16,
+              }}
+            >
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Order created date:
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 4 }}>
+                  <input
+                    type="date"
+                    value={exportFrom}
+                    onChange={(e) => setExportFrom(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: "1px solid #4b5563",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 13,
+                    }}
+                  />
+                  <span style={{ color: "#9ca3af" }}>–</span>
+                  <input
+                    type="date"
+                    value={exportTo}
+                    onChange={(e) => setExportTo(e.target.value)}
+                    style={{
+                      padding: "6px 10px",
+                      borderRadius: 6,
+                      border: "1px solid #4b5563",
+                      background: "#020617",
+                      color: "#e5e7eb",
+                      fontSize: 13,
+                    }}
+                  />
+                </div>
+              </label>
+
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Sale:
+                <select
+                  value={exportSaleId}
+                  onChange={(e) => setExportSaleId(e.target.value)}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #4b5563",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 13,
+                  }}
+                >
+                  <option value="">All</option>
+                  {sales.map((s) => (
+                    <option key={s.sale_id} value={String(s.sale_id)}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Order status:
+                <select
+                  value={exportOrderStatus}
+                  onChange={(e) => setExportOrderStatus(e.target.value)}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #4b5563",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 13,
+                  }}
+                >
+                  <option value="">All</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Checked">Checked</option>
+                  <option value="Packing">Packing</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Success">Success</option>
+                  <option value="Fail">Fail</option>
+                  <option value="Return Received">Return Received</option>
+                </select>
+              </label>
+
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Payment method:
+                <select
+                  value={exportPaymentMethod}
+                  onChange={(e) => setExportPaymentMethod(e.target.value)}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #4b5563",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 13,
+                  }}
+                >
+                  {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                    <option key={opt.value || "all-export"} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                marginTop: 8,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => {
+                  if (!exportLoading) {
+                    setExportOpen(false);
+                  }
+                }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  border: "1px solid #4b5563",
+                  background: "#020617",
+                  color: "#e5e7eb",
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={exportLoading}
+                onClick={async () => {
+                  try {
+                    setExportLoading(true);
+                    setExportError(null);
+                    const params: Record<string, string> = {};
+                    if (exportFrom.trim()) params.created_from = exportFrom.trim();
+                    if (exportTo.trim()) params.created_to = exportTo.trim();
+                    if (exportSaleId) params.sale_id = exportSaleId;
+                    if (exportPaymentMethod) params.payment_method = exportPaymentMethod;
+                    if (exportOrderStatus) params.order_status = exportOrderStatus;
+
+                    const res = await api.get<ArrayBuffer>("/orders/export", {
+                      params,
+                      responseType: "arraybuffer",
+                    });
+
+                    const blob = new Blob([res.data], {
+                      type:
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    const baseName =
+                      exportFrom && exportTo
+                        ? `orders_${exportFrom}_${exportTo}`
+                        : "orders_all";
+                    a.download = `${baseName}.xlsx`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    setExportOpen(false);
+                  } catch {
+                    setExportError("Failed to export orders.");
+                  } finally {
+                    setExportLoading(false);
+                  }
+                }}
+                style={{
+                  padding: "8px 14px",
+                  borderRadius: 6,
+                  border: "1px solid #10b981",
+                  background: exportLoading ? "#065f46" : "#059669",
+                  color: "#ecfdf5",
+                  fontSize: 13,
+                  cursor: exportLoading ? "default" : "pointer",
+                }}
+              >
+                {exportLoading ? "Exporting…" : "Export"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedOrderId != null && (
         <OrderDetailModal
