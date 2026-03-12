@@ -455,33 +455,6 @@ export default function AccountantPage() {
               </label>
 
               <label style={{ fontSize: 13, color: "#e5e7eb" }}>
-                Order status:
-                <select
-                  value={exportOrderStatus}
-                  onChange={(e) => setExportOrderStatus(e.target.value)}
-                  style={{
-                    marginTop: 4,
-                    width: "100%",
-                    padding: "6px 10px",
-                    borderRadius: 6,
-                    border: "1px solid #4b5563",
-                    background: "#020617",
-                    color: "#e5e7eb",
-                    fontSize: 13,
-                  }}
-                >
-                  <option value="">All</option>
-                  <option value="Pending">Pending</option>
-                  <option value="Checked">Checked</option>
-                  <option value="Packing">Packing</option>
-                  <option value="Shipped">Shipped</option>
-                  <option value="Success">Success</option>
-                  <option value="Fail">Fail</option>
-                  <option value="Return Received">Return Received</option>
-                </select>
-              </label>
-
-              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
                 Payment method:
                 <select
                   value={exportPaymentMethod}
@@ -529,6 +502,33 @@ export default function AccountantPage() {
                   <option value="Unmatched">Unmatched</option>
                 </select>
               </label>
+
+              <label style={{ fontSize: 13, color: "#e5e7eb" }}>
+                Order status:
+                <select
+                  value={exportOrderStatus}
+                  onChange={(e) => setExportOrderStatus(e.target.value)}
+                  style={{
+                    marginTop: 4,
+                    width: "100%",
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    border: "1px solid #4b5563",
+                    background: "#020617",
+                    color: "#e5e7eb",
+                    fontSize: 13,
+                  }}
+                >
+                  <option value="">All</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Checked">Checked</option>
+                  <option value="Packing">Packing</option>
+                  <option value="Shipped">Shipped</option>
+                  <option value="Success">Success</option>
+                  <option value="Fail">Fail</option>
+                  <option value="Return Received">Return Received</option>
+                </select>
+              </label>
             </div>
 
             <div
@@ -570,8 +570,8 @@ export default function AccountantPage() {
                     if (exportTo.trim()) params.created_to = exportTo.trim();
                     if (exportSaleId) params.sale_id = exportSaleId;
                     if (exportPaymentMethod) params.payment_method = exportPaymentMethod;
+                    if (exportPaymentStatus) params.payment_status = exportPaymentStatus;
                     if (exportOrderStatus) params.order_status = exportOrderStatus;
-                     if (exportPaymentStatus) params.payment_status = exportPaymentStatus;
 
                     const res = await api.post<ArrayBuffer>(
                       "/orders/export-orders",
