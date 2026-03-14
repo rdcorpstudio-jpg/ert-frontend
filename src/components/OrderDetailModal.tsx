@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import api from "../services/api";
 
 // -----------------------------------------------------------------------------
@@ -124,6 +124,8 @@ export default function OrderDetailModal({
   const [trackingNumber, setTrackingNumber] = useState("");
   const [shippingMethod, setShippingMethod] = useState<string>("Normal");
   const [savingShippingMethod, setSavingShippingMethod] = useState(false);
+  const [slipUploading, setSlipUploading] = useState(false);
+  const slipFileInputRef = useRef<HTMLInputElement>(null);
   type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const userRole = getUserRole();
@@ -402,6 +404,26 @@ export default function OrderDetailModal({
       alert(msg || "Failed to update shipping method.");
     } finally {
       setSavingShippingMethod(false);
+    }
+  };
+
+  const handleSlipFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !detail?.order?.id) return;
+    if (paymentStatus !== "Unchecked") return;
+    setSlipUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file_type", "payment_slip");
+      form.append("file", file);
+      await api.post(`/orders/${detail.order.id}/upload-file`, form);
+      if (slipFileInputRef.current) slipFileInputRef.current.value = "";
+      await onReload();
+    } catch (err: unknown) {
+      const res = err && typeof err === "object" && "response" in err ? (err as { response?: { data?: { detail?: string } } }).response : undefined;
+      alert(res?.data?.detail ?? "Failed to upload slip.");
+    } finally {
+      setSlipUploading(false);
     }
   };
 
@@ -1246,6 +1268,28 @@ export default function OrderDetailModal({
           >
             💳 Payment Slip Proof
           </a>
+        )}
+        {paymentStatus === "Unchecked" && (
+          <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <input
+              ref={slipFileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              style={{ display: "none" }}
+              onChange={handleSlipFileChange}
+            />
+            <button
+              type="button"
+              disabled={slipUploading}
+              onClick={() => slipFileInputRef.current?.click()}
+              style={saveBtn}
+            >
+              {slipUploading ? "Uploading…" : getFileByType(files, "payment_slip") ? "Replace slip file" : "Upload slip file"}
+            </button>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              {getFileByType(files, "payment_slip") ? "Replaces the current slip." : "Adds payment slip proof."}
+            </span>
+          </div>
         )}
         <div style={{ marginTop: 16 }}>
           <div style={label}>Payment Status (เฉพาะฝ่ายบัญชี)</div>
