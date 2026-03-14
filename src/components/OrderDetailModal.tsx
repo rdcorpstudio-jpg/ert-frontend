@@ -59,7 +59,7 @@ const ORDER_STATUS_FLOW: Record<string, string[]> = {
   Fail: ["Return Received"],
   "Return Received": [],
   Success: [],
-  Special: [], // own-fleet; packing cannot change; account manages payment only
+  Special: [], // shipping method Special; no next status
 };
 
 function getUserRole(): string {
@@ -122,13 +122,15 @@ export default function OrderDetailModal({
   const [savingInvoice, setSavingInvoice] = useState(false);
   const [savingOrderStatus, setSavingOrderStatus] = useState(false);
   const [trackingNumber, setTrackingNumber] = useState("");
-  type TabId = "overview" | "customer" | "order" | "payment" | "manager";
+  const [shippingMethod, setShippingMethod] = useState<string>("Normal");
+  const [savingShippingMethod, setSavingShippingMethod] = useState(false);
+  type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const userRole = getUserRole();
   const isManager = userRole === "manager";
   const tabList: TabId[] = isManager
-    ? ["overview", "customer", "order", "payment", "manager"]
-    : ["overview", "customer", "order", "payment"];
+    ? ["overview", "customer", "order", "payment", "shipping", "manager"]
+    : ["overview", "customer", "order", "payment", "shipping"];
 
   const order = detail?.order;
   const payment = detail?.payment;
@@ -182,6 +184,7 @@ export default function OrderDetailModal({
       setInvoiceRequired(Boolean(invReq) || Boolean(String(invTxt ?? "").trim()));
       setInvoiceText(String(invTxt ?? ""));
       setTrackingNumber(String((order as { tracking_number?: string | null }).tracking_number ?? ""));
+      setShippingMethod(String((order as { shipping_method?: string | null }).shipping_method ?? "Normal"));
     }
   }, [order]);
 
@@ -376,6 +379,29 @@ export default function OrderDetailModal({
       alert("Failed to update payment method.");
     } finally {
       setSavingPaymentMethod(false);
+    }
+  };
+
+  const handleSaveShippingMethod = async () => {
+    if (!detail?.order?.id) return;
+    if (orderStatus === "Special") {
+      alert("Cannot change shipping method when order status is already Special.");
+      return;
+    }
+    const current = String((order as { shipping_method?: string | null }).shipping_method ?? "Normal");
+    if (shippingMethod === current) return;
+    if (!window.confirm("Change shipping method? This will create an alert for the packing team.")) return;
+    setSavingShippingMethod(true);
+    try {
+      await api.put(`/orders/${detail.order.id}/shipping-method`, null, {
+        params: { shipping_method: shippingMethod },
+      });
+      await onReload();
+    } catch (e: unknown) {
+      const msg = e && typeof e === "object" && "response" in e && (e.response as { data?: { detail?: string } })?.data?.detail;
+      alert(msg || "Failed to update shipping method.");
+    } finally {
+      setSavingShippingMethod(false);
     }
   };
 
@@ -661,6 +687,7 @@ export default function OrderDetailModal({
               {tab === "customer" && "Customer"}
               {tab === "order" && "Order details"}
               {tab === "payment" && "Payment"}
+              {tab === "shipping" && "Shipping"}
               {tab === "manager" && "Manager"}
               {tab === "overview" && hasUnreadAlerts && (
                 <span style={{ background: "#f59e0b", color: "#000", padding: "2px 6px", borderRadius: 10, fontSize: 11 }}>
@@ -707,7 +734,7 @@ export default function OrderDetailModal({
                 {!hasUnreadAlerts && (userRole === "pack" || userRole === "manager") && allowedNextStatuses.length === 0 && (
                   <p style={{ fontSize: 12, color: "#9ca3af" }}>
                     {orderStatus === "Special"
-                      ? "This order is Special (ส่งเอง). Only account can manage payment status."
+                      ? "This order is Special (shipping method). Only account can manage payment status."
                       : orderStatus === "Pending"
                       ? "รอทางบัญชีตรวจสอบการชำระเงิน"
                       : "No further status steps for this order."}
@@ -786,8 +813,16 @@ export default function OrderDetailModal({
                 <div style={{ ...value, whiteSpace: "pre-wrap" }}>{freebieNote?.trim() || "—"}</div>
               </div>
             </div>
-            <div style={label}>Tracking number</div>
-            <div style={value}>{trackingNumber?.trim() || "—"}</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start", marginBottom: 16 }}>
+              <div>
+                <div style={label}>Tracking number</div>
+                <div style={value}>{trackingNumber?.trim() || "—"}</div>
+              </div>
+              <div>
+                <div style={label}>Shipping method</div>
+                <div style={value}>{shippingMethod === "Special" ? "🚗 Special" : (shippingMethod || "Normal")}</div>
+              </div>
+            </div>
             {getFilesByType(files, "invoice_submit").length > 0 && (
               <>
                 <div style={label}>Invoice (submitted)</div>
@@ -1134,7 +1169,6 @@ export default function OrderDetailModal({
               <option value="transfer">💎โอน</option>
               <option value="card_2c2p">💳บัตร 2C2P</option>
               <option value="card_pay">💳บัตร PAY</option>
-              <option value="special">🚗 Special (พี่วัฒน์)</option>
             </select>
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
               <>
@@ -1185,8 +1219,7 @@ export default function OrderDetailModal({
             {paymentMethod === "transfer" && "💎โอน"}
             {paymentMethod === "card_2c2p" && "💳บัตร 2C2P"}
             {paymentMethod === "card_pay" && "💳บัตร PAY"}
-            {paymentMethod === "special" && "🚗 Special (ส่งเอง)"}
-            {!["cod", "transfer", "card_2c2p", "card_pay", "special"].includes(paymentMethod) && (paymentMethod || "—")}
+            {!["cod", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
           </div>
         )}
@@ -1347,6 +1380,44 @@ export default function OrderDetailModal({
           {savingInvoice ? "Saving…" : "Save Invoice"}
         </button>
           </>
+        )}
+
+        {/* Tab: Shipping — Sale can edit Normal/Special; cannot change if order status is already Special */}
+        {activeTab === "shipping" && (
+          <div style={{ marginBottom: 16 }}>
+            <div style={sectionTitle}>Shipping method</div>
+            {orderStatus === "Special" ? (
+              <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 12 }}>
+                Cannot change shipping method when order status is already Special.
+              </p>
+            ) : (userRole === "sale" || userRole === "manager") ? (
+              <>
+                <div style={label}>วิธีจัดส่ง</div>
+                <select
+                  value={shippingMethod}
+                  onChange={(e) => setShippingMethod(e.target.value)}
+                  style={{
+                    ...inputStyle,
+                    maxWidth: 280,
+                    borderColor: "rgba(34, 197, 94, 0.35)",
+                  }}
+                >
+                  <option value="Normal">Normal</option>
+                  <option value="Special">Special</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={handleSaveShippingMethod}
+                  disabled={savingShippingMethod}
+                  style={{ ...saveBtn, marginTop: 10 }}
+                >
+                  {savingShippingMethod ? "Saving…" : "Save Shipping Method"}
+                </button>
+              </>
+            ) : (
+              <div style={value}>{shippingMethod === "Special" ? "🚗 Special" : (shippingMethod || "Normal")}</div>
+            )}
+          </div>
         )}
 
         {/* Tab: Manager (manager only — no restrictions on order status / payment status) */}

@@ -50,6 +50,7 @@ export default function SaleSummaryPage() {
   const [categoryBreakdown, setCategoryBreakdown] = useState<BreakdownItem[]>([]);
   const [pageBreakdown, setPageBreakdown] = useState<BreakdownItem[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<StatusBreakdownItem[]>([]);
+  const [shippingMethodBreakdown, setShippingMethodBreakdown] = useState<BreakdownItem[]>([]);
   const [topProducts, setTopProducts] = useState<BreakdownItem[]>([]);
 
   const formatBath = (n: number) =>
@@ -66,6 +67,7 @@ export default function SaleSummaryPage() {
       categories: BreakdownItem[];
       pages: BreakdownItem[];
       statuses: StatusBreakdownItem[];
+      shipping_methods: BreakdownItem[];
     }>("/orders/revenue-by-sale-breakdown", { params });
 
     const topProductsReq = api.get<{ items: BreakdownItem[] }>(
@@ -91,6 +93,9 @@ export default function SaleSummaryPage() {
         setStatusBreakdown(
           Array.isArray(resB.data?.statuses) ? resB.data.statuses : []
         );
+        setShippingMethodBreakdown(
+          Array.isArray(resB.data?.shipping_methods) ? resB.data.shipping_methods : []
+        );
         const items = Array.isArray(resP.data?.items) ? resP.data.items : [];
         // sort by revenue desc and keep top 5
         const sorted = [...items].sort(
@@ -102,6 +107,7 @@ export default function SaleSummaryPage() {
         setCategoryBreakdown([]);
         setPageBreakdown([]);
         setStatusBreakdown([]);
+        setShippingMethodBreakdown([]);
         setTopProducts([]);
       });
   };
@@ -135,12 +141,14 @@ export default function SaleSummaryPage() {
             setCategoryBreakdown([]);
             setPageBreakdown([]);
             setStatusBreakdown([]);
+            setShippingMethodBreakdown([]);
             setTopProducts([]);
           }
         } else {
           setCategoryBreakdown([]);
           setPageBreakdown([]);
           setStatusBreakdown([]);
+          setShippingMethodBreakdown([]);
           setTopProducts([]);
         }
       } else if (role === "sale") {
@@ -153,6 +161,7 @@ export default function SaleSummaryPage() {
           setCategoryBreakdown([]);
           setPageBreakdown([]);
           setStatusBreakdown([]);
+          setShippingMethodBreakdown([]);
           setTopProducts([]);
         }
       }
@@ -583,6 +592,7 @@ export default function SaleSummaryPage() {
                   setCategoryBreakdown([]);
                   setPageBreakdown([]);
                   setStatusBreakdown([]);
+                  setShippingMethodBreakdown([]);
                 }
               }}
               style={{
@@ -933,6 +943,54 @@ export default function SaleSummaryPage() {
                         </span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(s.revenue ?? 0)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+
+              <div
+                style={{
+                  ...cardStyle,
+                  minWidth: 260,
+                  justifyContent: "flex-start",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 600,
+                    color: "#e5e7eb",
+                    marginBottom: 8,
+                  }}
+                >
+                  By shipping method
+                </div>
+                {shippingMethodBreakdown.length === 0 ? (
+                  <div style={{ fontSize: 12, color: "#9ca3af" }}>—</div>
+                ) : (
+                  <ul
+                    style={{
+                      listStyle: "none",
+                      padding: 0,
+                      margin: 0,
+                      fontSize: 12,
+                      color: "#e5e7eb",
+                    }}
+                  >
+                    {shippingMethodBreakdown.map((m) => (
+                      <li
+                        key={m.name || "-"}
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span>{m.name === "Special" ? "🚗 " + m.name : (m.name || "—")}</span>
+                        <span style={{ color: "#fbbf24" }}>
+                          {formatBath(m.revenue ?? 0)}
                         </span>
                       </li>
                     ))}

@@ -74,7 +74,7 @@ export default function PackingPage() {
     p.set("shipping_date", today);
     p.set("sort_by", "oldest");
     p.set("order_status", orderStatus);
-    p.set("exclude_payment_method", "special"); // Special = own-fleet, not shown on packing page
+    p.set("shipping_method", "Normal");
     selectedCategories.forEach((c) => p.append("product_category", c));
     selectedPaymentMethods.forEach((m) => p.append("payment_method", m));
     return p;

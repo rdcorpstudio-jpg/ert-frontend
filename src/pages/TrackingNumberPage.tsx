@@ -49,7 +49,7 @@ export default function TrackingNumberPage() {
     Promise.all(
       TRACKING_STATUSES.map((status) =>
         api.get<OrderRow[]>("/orders", {
-          params: { order_status: status, sort_by: "oldest", has_tracking_number: false, exclude_payment_method: "special" },
+          params: { order_status: status, sort_by: "oldest", has_tracking_number: false, shipping_method: "Normal" },
         })
       )
     )

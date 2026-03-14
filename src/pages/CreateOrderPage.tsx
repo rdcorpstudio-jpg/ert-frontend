@@ -52,6 +52,7 @@ export default function CreateOrderPage() {
 
   const [pageName, setPageName] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [shippingMethod, setShippingMethod] = useState<"Normal" | "Special">("Normal");
   const [installmentType, setInstallmentType] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -203,6 +204,7 @@ export default function CreateOrderPage() {
         shipping_address: addressText,
         shipping_date: shippingDate || null,
         payment_method: paymentMethod || null,
+        shipping_method: shippingMethod || "Normal",
         invoice_text: invoiceText || null,
         note: note || null,
         shipping_note: shippingNote || null,
@@ -584,7 +586,6 @@ export default function CreateOrderPage() {
             <option value="transfer">💎โอน</option>
             <option value="card_2c2p">💳บัตร 2C2P</option>
             <option value="card_pay">💳บัตร PAY</option>
-            <option value="special">🚗 Special (พี่วัฒน์)</option>
           </select>
 
           {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
@@ -616,6 +617,18 @@ export default function CreateOrderPage() {
               )}
             </>
           )}
+        </div>
+
+        <div style={{ marginBottom: 30 }}>
+          <label style={labelStyle}>🚚 วิธีจัดส่ง (Shipping method)</label>
+          <select
+            value={shippingMethod}
+            onChange={(e) => setShippingMethod(e.target.value as "Normal" | "Special")}
+            style={inputStyle}
+          >
+            <option value="Normal">Normal</option>
+            <option value="Special">Special</option>
+          </select>
         </div>
 
 
