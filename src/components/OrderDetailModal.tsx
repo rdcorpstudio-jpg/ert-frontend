@@ -59,6 +59,7 @@ const ORDER_STATUS_FLOW: Record<string, string[]> = {
   Fail: ["Return Received"],
   "Return Received": [],
   Success: [],
+  Special: [], // own-fleet; packing cannot change; account manages payment only
 };
 
 function getUserRole(): string {
@@ -675,7 +676,7 @@ export default function OrderDetailModal({
           <div style={{ marginBottom: 16 }}>
             <div style={sectionTitle}>Order status</div>
             <div style={label}>Current status</div>
-            <div style={{ ...value, marginBottom: 8 }}>{orderStatus || "—"}</div>
+            <div style={{ ...value, marginBottom: 8 }}>{orderStatus === "Special" ? "🚗 Special" : (orderStatus || "—")}</div>
             {canChangeOrderStatus ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 16 }}>
                 {allowedNextStatuses.map((next: string) => (
@@ -705,7 +706,9 @@ export default function OrderDetailModal({
                 )}
                 {!hasUnreadAlerts && (userRole === "pack" || userRole === "manager") && allowedNextStatuses.length === 0 && (
                   <p style={{ fontSize: 12, color: "#9ca3af" }}>
-                    {orderStatus === "Pending"
+                    {orderStatus === "Special"
+                      ? "This order is Special (ส่งเอง). Only account can manage payment status."
+                      : orderStatus === "Pending"
                       ? "รอทางบัญชีตรวจสอบการชำระเงิน"
                       : "No further status steps for this order."}
                   </p>
@@ -1131,6 +1134,7 @@ export default function OrderDetailModal({
               <option value="transfer">💎โอน</option>
               <option value="card_2c2p">💳บัตร 2C2P</option>
               <option value="card_pay">💳บัตร PAY</option>
+              <option value="special">🚗 Special (พี่วัฒน์)</option>
             </select>
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
               <>
@@ -1181,7 +1185,8 @@ export default function OrderDetailModal({
             {paymentMethod === "transfer" && "💎โอน"}
             {paymentMethod === "card_2c2p" && "💳บัตร 2C2P"}
             {paymentMethod === "card_pay" && "💳บัตร PAY"}
-            {!["cod", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
+            {paymentMethod === "special" && "🚗 Special (ส่งเอง)"}
+            {!["cod", "transfer", "card_2c2p", "card_pay", "special"].includes(paymentMethod) && (paymentMethod || "—")}
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
           </div>
         )}
@@ -1352,7 +1357,7 @@ export default function OrderDetailModal({
             </p>
             <div style={sectionTitle}>Order status</div>
             <div style={label}>Current status</div>
-            <div style={{ ...value, marginBottom: 8 }}>{orderStatus || "—"}</div>
+            <div style={{ ...value, marginBottom: 8 }}>{orderStatus === "Special" ? "🚗 Special" : (orderStatus || "—")}</div>
             {allowedNextStatuses.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8, alignItems: "center", marginBottom: 24 }}>
                 {allowedNextStatuses.map((next: string) => (

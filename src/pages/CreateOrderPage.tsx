@@ -584,6 +584,7 @@ export default function CreateOrderPage() {
             <option value="transfer">💎โอน</option>
             <option value="card_2c2p">💳บัตร 2C2P</option>
             <option value="card_pay">💳บัตร PAY</option>
+            <option value="special">🚗 Special (พี่วัฒน์)</option>
           </select>
 
           {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (

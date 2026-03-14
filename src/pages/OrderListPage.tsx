@@ -343,6 +343,7 @@ export default function OrderListPage() {
           <option value="Checked">Checked</option>
           <option value="Packing">Packing</option>
           <option value="Shipped">Shipped</option>
+          <option value="Special">Special</option>
           <option value="Success">Success</option>
           <option value="Fail">Fail</option>
           <option value="Return Received">Return Received</option>
@@ -456,7 +457,8 @@ export default function OrderListPage() {
                       {rowData.order_status === "Checked" && "✅Checked"}
                       {rowData.order_status === "Packing" && "📦Packing"}
                       {rowData.order_status === "Shipped" && "🚚Shipped"}
-                      {!["Pending", "Checked", "Packing", "Shipped"].includes(rowData.order_status) &&
+                      {rowData.order_status === "Special" && "🚗Special"}
+                      {!["Pending", "Checked", "Packing", "Shipped", "Special"].includes(rowData.order_status) &&
                         (rowData.order_status ?? "-")}
                     </td>
                     <td style={td}>{rowData.payment_status ?? "-"}</td>
