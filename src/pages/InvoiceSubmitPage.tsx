@@ -51,8 +51,10 @@ export default function InvoiceSubmitPage() {
       }),
     ])
       .then(([waitRes, doneRes]) => {
-        setWaitingOrders(Array.isArray(waitRes.data) ? waitRes.data : []);
-        setDoneOrders(Array.isArray(doneRes.data) ? doneRes.data : []);
+        const toList = (res: { data?: { items?: OrderRow[] } | OrderRow[] }) =>
+          Array.isArray(res.data?.items) ? res.data.items : Array.isArray(res.data) ? res.data : [];
+        setWaitingOrders(toList(waitRes));
+        setDoneOrders(toList(doneRes));
       })
       .catch(() => setError("Failed to load orders."))
       .finally(() => setLoading(false));

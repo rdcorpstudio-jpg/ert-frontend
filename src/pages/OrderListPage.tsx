@@ -43,6 +43,10 @@ export default function OrderListPage() {
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [shippingDate, setShippingDate] = useState(""); // YYYY-MM-DD for filter
 
+  const PAGE_SIZE = 50;
+  const [page, setPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
+
   const fetchOrders = async (overrides?: {
     keyword?: string;
     order_status?: string;
@@ -50,6 +54,7 @@ export default function OrderListPage() {
     has_alert?: boolean;
     sort_by?: SortBy;
     shipping_date?: string;
+    page?: number;
   }) => {
     const k = overrides?.keyword !== undefined ? overrides.keyword : keyword;
     const os = overrides?.order_status !== undefined ? overrides.order_status : orderStatus;
@@ -57,23 +62,30 @@ export default function OrderListPage() {
     const ha = overrides?.has_alert !== undefined ? overrides.has_alert : hasAlert;
     const sb = overrides?.sort_by !== undefined ? overrides.sort_by : sortBy;
     const sd = overrides?.shipping_date !== undefined ? overrides.shipping_date : shippingDate;
+    const p = overrides?.page !== undefined ? overrides.page : page;
     const role = getUserRole();
-    const params: Record<string, string | boolean | undefined> = {
+    const params: Record<string, string | number | boolean | undefined> = {
       keyword: String(k).trim() || undefined,
       order_status: os || undefined,
       payment_status: ps || undefined,
       has_alert: ha || undefined,
       sort_by: sb,
       shipping_date: sd || undefined,
+      limit: PAGE_SIZE,
+      offset: (p - 1) * PAGE_SIZE,
     };
     if (role === "sale") params.only_my = true;
     setLoading(true);
     setError(null);
     try {
-      const { data } = await api.get<OrderRow[]>("/orders", {
+      const { data } = await api.get<{ items: OrderRow[]; total: number }>("/orders", {
         params,
       });
-      setOrders(Array.isArray(data) ? data : []);
+      const list = data?.items ?? (Array.isArray(data) ? data : []);
+      const total = typeof data?.total === "number" ? data.total : list.length;
+      setOrders(Array.isArray(list) ? list : []);
+      setTotalOrders(total);
+      setPage(p);
     } catch (e) {
       setError("Failed to load orders.");
       setOrders([]);
@@ -82,10 +94,15 @@ export default function OrderListPage() {
     }
   };
 
-  // Initial load and instant refetch when filter, sort, or shipping_date changes
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [orderStatus, paymentStatus, sortBy, hasAlert, shippingDate]);
+
+  // Fetch when filter, sort, shipping_date or page changes
   useEffect(() => {
     fetchOrders();
-  }, [orderStatus, paymentStatus, sortBy, hasAlert, shippingDate]);
+  }, [orderStatus, paymentStatus, sortBy, hasAlert, shippingDate, page]);
 
   const handleSearch = () => fetchOrders();
 
@@ -96,8 +113,18 @@ export default function OrderListPage() {
     setHasAlert(false);
     setShippingDate("");
     setSortBy("newest");
-    fetchOrders({ keyword: "", order_status: "", payment_status: "", has_alert: false, shipping_date: "", sort_by: "newest" });
+    setPage(1);
+    // useEffect will refetch when state updates
   };
+
+  const totalPages = Math.max(1, Math.ceil(totalOrders / PAGE_SIZE));
+  const pageNumbers: number[] = [];
+  const showPages = 5;
+  let startPage = Math.max(1, page - Math.floor(showPages / 2));
+  if (startPage + showPages - 1 > totalPages) startPage = Math.max(1, totalPages - showPages + 1);
+  for (let i = 0; i < showPages && startPage + i <= totalPages; i++) {
+    pageNumbers.push(startPage + i);
+  }
 
   const getUserRole = (): string => {
     try {
@@ -401,6 +428,12 @@ export default function OrderListPage() {
       {loading ? (
         <p style={{ color: "#888" }}>Loading orders…</p>
       ) : (
+        <>
+        <div style={{ marginBottom: 12, fontSize: 13, color: "#999" }}>
+          {totalOrders === 0
+            ? "No orders"
+            : `Showing ${(page - 1) * PAGE_SIZE + 1}–${Math.min(page * PAGE_SIZE, totalOrders)} of ${totalOrders} orders`}
+        </div>
         <div style={tableWrap}>
           <table style={table}>
             <thead>
@@ -431,7 +464,7 @@ export default function OrderListPage() {
                     onMouseEnter={() => setHoveredRowId(rowData.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
                   >
-                    <td style={td}>{index + 1}</td>
+                    <td style={td}>{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td style={td}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                         {rowData.order_code ?? "-"}
@@ -499,6 +532,41 @@ export default function OrderListPage() {
             </tbody>
           </table>
         </div>
+        {totalPages > 1 && (
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              style={{ ...btnStyle, padding: "8px 12px" }}
+            >
+              ← Prev
+            </button>
+            {pageNumbers.map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => setPage(n)}
+                style={{
+                  ...(n === page ? btnPrimaryStyle : btnStyle),
+                  padding: "8px 12px",
+                  minWidth: 36,
+                }}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              style={{ ...btnStyle, padding: "8px 12px" }}
+            >
+              Next →
+            </button>
+          </div>
+        )}
+        </>
       )}
 
       {selectedOrderId != null && (

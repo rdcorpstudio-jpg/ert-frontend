@@ -56,7 +56,8 @@ export default function TrackingNumberPage() {
       .then((results) => {
         const byId = new Map<number, OrderRow>();
         results.forEach((r) => {
-          (Array.isArray(r.data) ? r.data : []).forEach((row) => byId.set(row.id, row));
+          const list = Array.isArray(r.data?.items) ? r.data.items : Array.isArray(r.data) ? r.data : [];
+          list.forEach((row: OrderRow) => byId.set(row.id, row));
         });
         setOrders(Array.from(byId.values()).sort((a, b) => a.id - b.id));
       })

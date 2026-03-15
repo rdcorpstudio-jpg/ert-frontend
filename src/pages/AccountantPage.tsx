@@ -90,7 +90,12 @@ export default function AccountantPage() {
       .then((results) => {
         const next: Record<string, OrderRow[]> = {};
         PAYMENT_COLUMNS.forEach(({ key }, i) => {
-          next[key] = Array.isArray(results[i].data) ? results[i].data : [];
+          const d = results[i].data as { items?: OrderRow[] } | OrderRow[] | undefined;
+          next[key] = d && typeof d === "object" && "items" in d && Array.isArray(d.items)
+            ? d.items
+            : Array.isArray(d)
+            ? d
+            : [];
         });
         setOrdersByStatus(next);
       })
