@@ -93,12 +93,10 @@ export default function PackingPage() {
     ])
       .then(([a, b, c, d]) => {
         if (cancelled) return;
-        const toList = (res: { data?: { items?: OrderRow[] } | OrderRow[] }) =>
-          Array.isArray(res.data?.items) ? res.data.items : Array.isArray(res.data) ? res.data : [];
-        setPendingOrders(toList(a));
-        setCheckedOrders(toList(b));
-        setPackingOrders(toList(c));
-        setShippedOrders(toList(d));
+        setPendingOrders(Array.isArray(a.data) ? a.data : []);
+        setCheckedOrders(Array.isArray(b.data) ? b.data : []);
+        setPackingOrders(Array.isArray(c.data) ? c.data : []);
+        setShippedOrders(Array.isArray(d.data) ? d.data : []);
       })
       .catch(() => { if (!cancelled) setError("Failed to load orders."); })
       .finally(() => { if (!cancelled) setLoading(false); });
@@ -136,12 +134,10 @@ export default function PackingPage() {
         api.get<OrderRow[]>("/orders", { params: buildParams("Packing") }),
         api.get<OrderRow[]>("/orders", { params: buildParams("Shipped") }),
       ]);
-      const toList = (res: { data?: { items?: OrderRow[] } | OrderRow[] }) =>
-        Array.isArray(res.data?.items) ? res.data.items : Array.isArray(res.data) ? res.data : [];
-      setPendingOrders(toList(a));
-      setCheckedOrders(toList(b));
-      setPackingOrders(toList(c));
-      setShippedOrders(toList(d));
+      setPendingOrders(Array.isArray(a.data) ? a.data : []);
+      setCheckedOrders(Array.isArray(b.data) ? b.data : []);
+      setPackingOrders(Array.isArray(c.data) ? c.data : []);
+      setShippedOrders(Array.isArray(d.data) ? d.data : []);
     } catch {
       setError("Failed to reload.");
     }

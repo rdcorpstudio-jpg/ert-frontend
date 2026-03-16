@@ -85,6 +85,7 @@ export default function DashboardPage() {
   const [revenueByCategory, setRevenueByCategory] = useState<RevenueByProductItem[]>([]);
   const [revenueByProduct, setRevenueByProduct] = useState<RevenueByProductItem[]>([]);
   const [revenueBySale, setRevenueBySale] = useState<RevenueByProductItem[]>([]);
+  const [revenueByPaymentMethod, setRevenueByPaymentMethod] = useState<RevenueByProductItem[]>([]);
   const [pieChartMode, setPieChartMode] = useState<"category" | "product_name">("category");
 
   const role = getUserRole();
@@ -105,17 +106,24 @@ export default function DashboardPage() {
       params: { ...params, group_by: "product_name" },
     });
     const reqBySale = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-sale", { params });
-    Promise.all([reqSummary, reqSeries, reqByCategory, reqByProduct, reqBySale])
-      .then(([resS, resD, resCat, resProd, resSale]) => {
+    const reqByPaymentMethod = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-payment-method", {
+      params,
+    });
+    Promise.all([reqSummary, reqSeries, reqByCategory, reqByProduct, reqBySale, reqByPaymentMethod])
+      .then(([resS, resD, resCat, resProd, resSale, resPay]) => {
         setSummary(resS.data);
         setSeries(Array.isArray(resD.data?.series) ? resD.data.series : []);
         setRevenueByCategory(Array.isArray(resCat.data?.items) ? resCat.data.items : []);
         setRevenueByProduct(Array.isArray(resProd.data?.items) ? resProd.data.items : []);
         setRevenueBySale(Array.isArray(resSale.data?.items) ? resSale.data.items : []);
+        setRevenueByPaymentMethod(Array.isArray(resPay.data?.items) ? resPay.data.items : []);
         setAppliedFrom(from ?? "");
         setAppliedTo(to ?? "");
       })
-      .catch(() => setError("Failed to load revenue data."))
+      .catch(() => {
+        setError("Failed to load revenue data.");
+        setRevenueByPaymentMethod([]);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -664,6 +672,71 @@ export default function DashboardPage() {
                       labelLine={{ stroke: "#888" }}
                     >
                       {salePieData.map((_, i) => (
+                        <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{ background: "#1a1a1a", border: "1px solid #444" }}
+                      formatter={(value: unknown) => [formatBath(Number(value ?? 0)), "Revenue"]}
+                    />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              );
+            })()}
+          </div>
+
+          {/* Revenue by payment method */}
+          <div
+            style={{
+              flex: "1 1 320px",
+              minWidth: 280,
+              background: "#252525",
+              border: "1px solid #333",
+              borderRadius: 12,
+              padding: 16,
+              minHeight: 320,
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 16 }}>
+              Revenue by payment method
+            </div>
+            {(() => {
+              const paymentMethodLabels: Record<string, string> = {
+                cod: "ปลายทาง (COD)",
+                transfer: "โอน",
+                card_2c2p: "บัตร 2C2P",
+                card_pay: "บัตร PAY",
+              };
+              const payPieData = revenueByPaymentMethod
+                .filter((d) => (d.revenue ?? 0) > 0)
+                .map((d) => ({
+                  name: paymentMethodLabels[d.name] ?? d.name,
+                  value: d.revenue,
+                }));
+              if (payPieData.length === 0) {
+                return (
+                  <p style={{ color: "#666", padding: 24, margin: 0 }}>
+                    No revenue data in range
+                  </p>
+                );
+              }
+              return (
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={payPieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={100}
+                      label={({ name, percent }) =>
+                        `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
+                      }
+                      labelLine={{ stroke: "#888" }}
+                    >
+                      {payPieData.map((_, i) => (
                         <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
                       ))}
                     </Pie>
