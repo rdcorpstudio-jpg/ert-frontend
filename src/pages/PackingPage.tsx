@@ -8,6 +8,7 @@ type OrderRow = {
   order_code: string;
   sale_name?: string | null;
   customer_name: string | null;
+  shipping_note?: string | null;
   order_status: string;
   payment_status: string;
   has_unread_alert?: boolean;
@@ -219,10 +220,15 @@ export default function PackingPage() {
                   </td>
                 </tr>
               ) : (
-                orders.map((row) => (
+                orders.map((row) => {
+                  const hasShippingNote = !!(row.shipping_note && row.shipping_note.trim().length > 0);
+                  return (
                   <tr
                     key={row.id}
-                    style={{ cursor: "pointer", background: undefined }}
+                    style={{
+                      cursor: "pointer",
+                      background: hasShippingNote ? "#3b1f1f" : undefined,
+                    }}
                     onClick={() => openDetail(row.id)}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = "#252525";
@@ -233,11 +239,28 @@ export default function PackingPage() {
                   >
                     <td style={tdStyle}>{row.order_code ?? "-"}</td>
                     <td style={tdStyle}>{row.sale_name ?? "-"}</td>
-                    <td style={tdStyle}>{row.customer_name ?? "-"}</td>
+                    <td style={tdStyle}>
+                      {row.customer_name ?? "-"}
+                      {hasShippingNote && (
+                        <span
+                          style={{
+                            marginLeft: 6,
+                            padding: "2px 6px",
+                            borderRadius: 6,
+                            background: "#f59e0b",
+                            color: "#111827",
+                            fontSize: 11,
+                          }}
+                        >
+                          มีหมายเหตุ
+                        </span>
+                      )}
+                    </td>
                     <td style={tdStyle}>{row.main_product_name ?? "-"}</td>
                     <td style={tdStyle}>{row.has_unread_alert ? "⚠️" : "—"}</td>
                   </tr>
-                ))
+                );
+              })
               )}
             </tbody>
           </table>
