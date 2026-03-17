@@ -193,7 +193,7 @@ export default function MenuPage() {
               }}
             >
               <span style={iconStyle}>🔢</span>
-              <span style={labelStyle}>Invoice Number</span>
+              <span style={labelStyle}>กรอกเลข Invoice</span>
               <span style={descStyle}>กรอกเลขที่ใบกำกับภาษีของออเดอร์</span>
             </Link>
           </>
