@@ -147,19 +147,17 @@ export default function CreateOrderPage() {
       setFreebies(res.data);
     });
 
-    // Load saved page names from localStorage (managed in DevPage)
-    try {
-      const raw = localStorage.getItem("pageNames");
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          const unique = Array.from(new Set(list.map((v) => String(v).trim()).filter(Boolean)));
-          setPageNameOptions(unique);
-        }
-      }
-    } catch {
-      // ignore
-    }
+    // Load page names from backend
+    api
+      .get<Array<{ id: number; name: string }>>("/orders/page-names")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const names = Array.from(new Set(list.map((p) => (p.name ?? "").trim()).filter(Boolean)));
+        setPageNameOptions(names);
+      })
+      .catch(() => {
+        setPageNameOptions([]);
+      });
   }, []);
 
   const extractNamePhone = () => {

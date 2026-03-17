@@ -66,7 +66,7 @@ export default function DevPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
 
-  const [pageNames, setPageNames] = useState<string[]>([]);
+  const [pageNames, setPageNames] = useState<Array<{ id: number; name: string }>>([]);
   const [newPageName, setNewPageName] = useState("");
   const [pageNameMessage, setPageNameMessage] = useState("");
 
@@ -78,29 +78,26 @@ export default function DevPage() {
       setCategories(cats);
     }).catch(() => setCategories([]));
 
-    // Load saved page names from localStorage
-    try {
-      const raw = localStorage.getItem("pageNames");
-      if (raw) {
-        const list = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          const unique = Array.from(new Set(list.map((v) => String(v).trim()).filter(Boolean)));
-          setPageNames(unique);
+    // Load page names from backend
+    api
+      .get<Array<{ id: number; name: string }>>("/orders/page-names")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const unique = list
+          .map((p) => ({ id: p.id, name: (p.name ?? "").trim() }))
+          .filter((p) => p.name.length > 0);
+        // simple dedupe by name
+        const seen = new Set<string>();
+        const deduped: Array<{ id: number; name: string }> = [];
+        for (const p of unique) {
+          if (seen.has(p.name)) continue;
+          seen.add(p.name);
+          deduped.push(p);
         }
-      }
-    } catch {
-      setPageNames([]);
-    }
+        setPageNames(deduped.sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => setPageNames([]));
   }, [isManager]);
-
-  const persistPageNames = (list: string[]) => {
-    setPageNames(list);
-    try {
-      localStorage.setItem("pageNames", JSON.stringify(list));
-    } catch {
-      // ignore storage errors
-    }
-  };
 
   const handleAddPageName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,19 +106,38 @@ export default function DevPage() {
       setPageNameMessage("กรอกชื่อเพจก่อน");
       return;
     }
-    if (pageNames.includes(name)) {
+    if (pageNames.some((p) => p.name === name)) {
       setPageNameMessage("มีชื่อนี้ในรายการแล้ว");
       return;
     }
-    const next = [...pageNames, name].sort((a, b) => a.localeCompare(b));
-    persistPageNames(next);
-    setNewPageName("");
-    setPageNameMessage("บันทึกชื่อเพจแล้ว");
+    api
+      .post("/orders/page-names", { name })
+      .then(() => {
+        setNewPageName("");
+        setPageNameMessage("บันทึกชื่อเพจแล้ว");
+        // reload list
+        return api.get<Array<{ id: number; name: string }>>("/orders/page-names");
+      })
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setPageNames(list.sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => {
+        setPageNameMessage("บันทึกชื่อเพจไม่สำเร็จ");
+      });
   };
 
   const handleRemovePageName = (name: string) => {
-    const next = pageNames.filter((n) => n !== name);
-    persistPageNames(next);
+    const target = pageNames.find((p) => p.name === name);
+    if (!target) return;
+    api
+      .delete(`/orders/page-names/${target.id}`)
+      .then(() =>
+        setPageNames((prev) => prev.filter((p) => p.id !== target.id))
+      )
+      .catch(() => {
+        setPageNameMessage("ลบชื่อเพจไม่สำเร็จ");
+      });
   };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
@@ -371,9 +387,9 @@ export default function DevPage() {
           <div style={{ marginTop: 16 }}>
             <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>รายชื่อเพจที่มีอยู่:</p>
             <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-              {pageNames.map((name) => (
+              {pageNames.map(({ id, name }) => (
                 <li
-                  key={name}
+                  key={id}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
