@@ -256,21 +256,21 @@ export default function OrderListPage() {
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 title="Accountant view by payment status"
               >
-                📒 Accountant
+                📒 เช็คยอด
               </Link>
               <Link
                 to="/orders/invoice-number"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 title="Fill invoice numbers"
               >
-                🔢 Invoice Number
+                🔢 กรอกเลข Invoice
               </Link>
               <Link
                 to="/orders/invoice-submit"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 title="Upload invoice for orders that require it"
               >
-                📄 Invoice Submit
+                📄 อัพโหลด Invoice ให้ลูกค้า
               </Link>
               <Link
                 to="/dashboard"
