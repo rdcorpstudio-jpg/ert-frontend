@@ -230,12 +230,6 @@ export default function PackingPage() {
                       background: hasShippingNote ? "#3b1f1f" : undefined,
                     }}
                     onClick={() => openDetail(row.id)}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.background = "#252525";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.background = "";
-                    }}
                   >
                     <td style={tdStyle}>{row.order_code ?? "-"}</td>
                     <td style={tdStyle}>{row.sale_name ?? "-"}</td>
