@@ -31,6 +31,8 @@ export default function InvoiceNumberPage() {
   const [error, setError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [drafts, setDrafts] = useState<Record<number, string>>({});
+  const [keyword, setKeyword] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState<string>("");
 
   const fetchRows = () => {
     if (!canAccess) return;
@@ -129,6 +131,19 @@ export default function InvoiceNumberPage() {
     borderBottom: "1px solid #374151",
   };
 
+  const normalizedKeyword = keyword.trim().toLowerCase();
+  const filteredRows = rows.filter((row) => {
+    const matchesKeyword =
+      !normalizedKeyword ||
+      row.order_code.toLowerCase().includes(normalizedKeyword) ||
+      (row.customer_name ?? "").toLowerCase().includes(normalizedKeyword) ||
+      // customer phone not in this payload; keep placeholder for future
+      false;
+    const matchesPayment =
+      !paymentStatusFilter || (row.payment_status ?? "") === paymentStatusFilter;
+    return matchesKeyword && matchesPayment;
+  });
+
   return (
     <div style={pageStyle}>
       <div style={headerStyle}>
@@ -157,6 +172,55 @@ export default function InvoiceNumberPage() {
         </div>
       )}
 
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          marginBottom: 12,
+          flexWrap: "wrap",
+        }}
+      >
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          placeholder="Search order ID, customer name, phone…"
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #4b5563",
+            background: "#111827",
+            color: "#e5e7eb",
+            fontSize: 13,
+            minWidth: 260,
+            flex: 1,
+            maxWidth: 360,
+          }}
+        />
+        <span style={{ color: "#9ca3af", fontSize: 13 }}>Payment status:</span>
+        <select
+          value={paymentStatusFilter}
+          onChange={(e) => setPaymentStatusFilter(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #4b5563",
+            background: "#111827",
+            color: "#e5e7eb",
+            fontSize: 13,
+            minWidth: 160,
+          }}
+        >
+          <option value="">All</option>
+          <option value="Unchecked">Unchecked</option>
+          <option value="Checked">Checked</option>
+          <option value="Paid">Paid</option>
+          <option value="Received">Received</option>
+          <option value="Unmatched">Unmatched</option>
+        </select>
+      </div>
+
       <div style={tableWrapStyle}>
         <div
           style={{
@@ -165,11 +229,11 @@ export default function InvoiceNumberPage() {
             borderBottom: "1px solid #374151",
           }}
         >
-          Orders that don&apos;t have invoice number yet ({rows.length})
+          Orders that don&apos;t have invoice number yet ({filteredRows.length})
         </div>
         {loading ? (
           <p style={{ padding: 16, color: "#9ca3af", margin: 0 }}>Loading…</p>
-        ) : rows.length === 0 ? (
+        ) : filteredRows.length === 0 ? (
           <p style={{ padding: 16, color: "#9ca3af", margin: 0 }}>No orders.</p>
         ) : (
           <div style={{ maxHeight: 500, overflow: "auto" }}>
@@ -184,7 +248,7 @@ export default function InvoiceNumberPage() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((row) => (
+                {filteredRows.map((row) => (
                   <tr key={row.id}>
                     <td style={tdStyle}>{row.order_code}</td>
                     <td style={tdStyle}>{row.customer_name ?? "-"}</td>
