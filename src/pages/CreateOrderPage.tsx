@@ -155,9 +155,6 @@ export default function CreateOrderPage() {
         if (Array.isArray(list)) {
           const unique = Array.from(new Set(list.map((v) => String(v).trim()).filter(Boolean)));
           setPageNameOptions(unique);
-          if (!pageName && unique.length > 0) {
-            setPageName(unique[0]);
-          }
         }
       }
     } catch {
