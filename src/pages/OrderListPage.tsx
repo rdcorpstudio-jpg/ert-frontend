@@ -249,7 +249,7 @@ export default function OrderListPage() {
               + Create Order
             </Link>
           )}
-          {canAccessAccountant && (
+          {role === "account" || role === "manager" ? (
             <>
               <Link
                 to="/orders/accountant"
@@ -257,6 +257,13 @@ export default function OrderListPage() {
                 title="Accountant view by payment status"
               >
                 📒 Accountant
+              </Link>
+              <Link
+                to="/orders/invoice-number"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                title="Fill invoice numbers"
+              >
+                🔢 Invoice Number
               </Link>
               <Link
                 to="/orders/invoice-submit"
@@ -273,34 +280,46 @@ export default function OrderListPage() {
                 📊 Dashboard
               </Link>
             </>
-          )}
-          {canAccessTracking && (
-            <Link
-              to="/orders/tracking"
-              style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-              title="Tracking numbers (Pack/Manager)"
-            >
-              🔢 Tracking
-            </Link>
-          )}
-          {role === "sale" ? (
-            <Link
-              to="/sale-summary"
-              style={{ ...btnPrimaryStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-              title="Sale Summary"
-            >
-              📈 Sale Summary
-            </Link>
           ) : (
-            <button
-              type="button"
-              onClick={handlePackingShortcut}
-              disabled={!canUsePackingShortcut}
-              style={canUsePackingShortcut ? btnPrimaryStyle : { ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
-              title={canUsePackingShortcut ? "Today’s packing: shipping date = today, order status = Checked" : "Pack or Manager only"}
-            >
-              📦 Packing
-            </button>
+            <>
+              {canAccessAccountant && (
+                <Link
+                  to="/orders/accountant"
+                  style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                  title="Accountant view by payment status"
+                >
+                  📒 Accountant
+                </Link>
+              )}
+              {canAccessTracking && (
+                <Link
+                  to="/orders/tracking"
+                  style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                  title="Tracking numbers (Pack/Manager)"
+                >
+                  🔢 Tracking
+                </Link>
+              )}
+              {role === "sale" ? (
+                <Link
+                  to="/sale-summary"
+                  style={{ ...btnPrimaryStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                  title="Sale Summary"
+                >
+                  📈 Sale Summary
+                </Link>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handlePackingShortcut}
+                  disabled={!canUsePackingShortcut}
+                  style={canUsePackingShortcut ? btnPrimaryStyle : { ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
+                  title={canUsePackingShortcut ? "Today’s packing: shipping date = today, order status = Checked" : "Pack or Manager only"}
+                >
+                  📦 Packing
+                </button>
+              )}
+            </>
           )}
           <button type="button" onClick={() => fetchOrders()} style={btnStyle} title="Reload list">
             🔄 Refresh
