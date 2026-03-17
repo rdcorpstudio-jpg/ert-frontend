@@ -180,6 +180,22 @@ export default function MenuPage() {
               <span style={labelStyle}>อัพโหลดใบกำกับภาษี</span>
               <span style={descStyle}>อัพโหลดใบกำกับภาษีของออเดอร์ที่ต้องการ</span>
             </Link>
+            <Link
+              to="/orders/invoice-number"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>🔢</span>
+              <span style={labelStyle}>Invoice Number</span>
+              <span style={descStyle}>กรอกเลขที่ใบกำกับภาษีของออเดอร์</span>
+            </Link>
           </>
         )}
         {(role === "pack" || role === "manager") && (

@@ -8,6 +8,7 @@ import DevPage from "./pages/DevPage";
 import AccountantPage from "./pages/AccountantPage";
 import TrackingNumberPage from "./pages/TrackingNumberPage";
 import InvoiceSubmitPage from "./pages/InvoiceSubmitPage";
+import InvoiceNumberPage from "./pages/InvoiceNumberPage";
 import DashboardPage from "./pages/DashboardPage";
 import LineNotificationSetupPage from "./pages/LineNotificationSetupPage";
 import SaleSummaryPage from "./pages/SaleSummaryPage";
@@ -26,6 +27,7 @@ export default function AppRouter() {
         <Route path="/orders/packing" element={<PackingPage />} />
         <Route path="/orders/tracking" element={<TrackingNumberPage />} />
         <Route path="/orders/invoice-submit" element={<InvoiceSubmitPage />} />
+        <Route path="/orders/invoice-number" element={<InvoiceNumberPage />} />
         <Route path="/orders/create" element={<CreateOrderPage />} />
         <Route path="/dev" element={<DevPage />} />
         <Route path="/orders/accountant" element={<AccountantPage />} />
