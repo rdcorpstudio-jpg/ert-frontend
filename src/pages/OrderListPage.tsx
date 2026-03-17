@@ -13,6 +13,8 @@ type OrderRow = {
   customer_name: string | null;
   order_status: string;
   payment_status: string;
+  pageName?: string | null;
+  invoice_number?: string | null;
   has_unread_alert?: boolean;
   has_invoice_submitted?: boolean;
   invoice_submit_file_url?: string | null;
@@ -450,23 +452,25 @@ export default function OrderListPage() {
         <p style={{ color: "#888" }}>Loading orders…</p>
       ) : (
         <div style={tableWrap}>
-          <table style={table}>
-            <thead>
-              <tr>
-                <th style={th}>No.</th>
-                <th style={th}>Order ID</th>
-                <th style={th}>Customer Name</th>
-                <th style={th}>Order Status</th>
-                <th style={th}>Payment Status</th>
-                <th style={th}>Tracking</th>
-                <th style={th}>Invoice</th>
-                <th style={th}>Alert</th>
-              </tr>
-            </thead>
+            <table style={table}>
+              <thead>
+                <tr>
+                  <th style={th}>No.</th>
+                  <th style={th}>Order ID</th>
+                  <th style={th}>Customer Name</th>
+                  <th style={th}>Page</th>
+                  <th style={th}>Order Status</th>
+                  <th style={th}>Payment Status</th>
+                  <th style={th}>Tracking</th>
+                  <th style={th}>Invoice Number</th>
+                  <th style={th}>Invoice File</th>
+                  <th style={th}>Alert</th>
+                </tr>
+              </thead>
             <tbody>
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={8} style={{ ...td, textAlign: "center", color: "#888" }}>
+                  <td colSpan={10} style={{ ...td, textAlign: "center", color: "#888" }}>
                     No orders found.
                   </td>
                 </tr>
@@ -500,6 +504,7 @@ export default function OrderListPage() {
                       </span>
                     </td>
                     <td style={td}>{rowData.customer_name ?? "-"}</td>
+                    <td style={td}>{rowData.pageName ?? "-"}</td>
                     <td style={td}>
                       {rowData.order_status === "Pending" && "⌛Pending"}
                       {rowData.order_status === "Checked" && "✅Checked"}
@@ -524,6 +529,7 @@ export default function OrderListPage() {
                         "—"
                       )}
                     </td>
+                    <td style={td}>{rowData.invoice_number ?? "—"}</td>
                     <td style={td} onClick={(e) => e.stopPropagation()}>
                       {rowData.invoice_submit_file_url ? (
                         <a
