@@ -5,6 +5,7 @@ import api from "../services/api";
 type CodRow = {
   id: number;
   order_code: string;
+  shipping_date?: string | null;
   customer_name: string | null;
   main_product_name?: string | null;
   payment_status: string;
@@ -175,6 +176,7 @@ export default function CheckCODPage() {
             <thead>
               <tr>
                 <th style={thStyle}>Order ID</th>
+                <th style={thStyle}>Shipping date</th>
                 <th style={thStyle}>Customer</th>
                 <th style={thStyle}>Product name</th>
                 <th style={thStyle}>Payment status</th>
@@ -185,6 +187,7 @@ export default function CheckCODPage() {
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.order_code}</td>
+                  <td style={tdStyle}>{row.shipping_date ?? "-"}</td>
                   <td style={tdStyle}>{row.customer_name ?? "-"}</td>
                   <td style={tdStyle}>{row.main_product_name ?? "-"}</td>
                   <td style={tdStyle}>{row.payment_status}</td>
