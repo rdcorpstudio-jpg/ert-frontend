@@ -66,6 +66,10 @@ export default function DevPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
 
+  const [pageNames, setPageNames] = useState<string[]>([]);
+  const [newPageName, setNewPageName] = useState("");
+  const [pageNameMessage, setPageNameMessage] = useState("");
+
   useEffect(() => {
     if (!isManager) return;
     api.get<Array<{ category?: string | null }>>("/products").then((res) => {
@@ -73,7 +77,52 @@ export default function DevPage() {
       const cats = [...new Set(list.map((p) => p.category).filter(Boolean) as string[])].sort();
       setCategories(cats);
     }).catch(() => setCategories([]));
+
+    // Load saved page names from localStorage
+    try {
+      const raw = localStorage.getItem("pageNames");
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const unique = Array.from(new Set(list.map((v) => String(v).trim()).filter(Boolean)));
+          setPageNames(unique);
+        }
+      }
+    } catch {
+      setPageNames([]);
+    }
   }, [isManager]);
+
+  const persistPageNames = (list: string[]) => {
+    setPageNames(list);
+    try {
+      localStorage.setItem("pageNames", JSON.stringify(list));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const handleAddPageName = (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newPageName.trim();
+    if (!name) {
+      setPageNameMessage("กรอกชื่อเพจก่อน");
+      return;
+    }
+    if (pageNames.includes(name)) {
+      setPageNameMessage("มีชื่อนี้ในรายการแล้ว");
+      return;
+    }
+    const next = [...pageNames, name].sort((a, b) => a.localeCompare(b));
+    persistPageNames(next);
+    setNewPageName("");
+    setPageNameMessage("บันทึกชื่อเพจแล้ว");
+  };
+
+  const handleRemovePageName = (name: string) => {
+    const next = pageNames.filter((n) => n !== name);
+    persistPageNames(next);
+  };
 
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,7 +224,7 @@ export default function DevPage() {
   return (
     <div style={{ padding: 24, maxWidth: 560, margin: "0 auto", color: "#eee" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24 }}>
-        <h1 style={{ margin: 0, fontSize: 22 }}>Dev — Create Product &amp; Account</h1>
+        <h1 style={{ margin: 0, fontSize: 22 }}>Dev — Tools (Manager only)</h1>
         <Link
           to="/menu"
           style={{
@@ -299,6 +348,58 @@ export default function DevPage() {
           <p style={{ marginTop: 12, color: deleteMessage.startsWith("Deleted") && !deleteMessage.includes("failed") ? "#22c55e" : "#f59e0b" }}>
             {deleteMessage}
           </p>
+        )}
+      </form>
+
+      <form onSubmit={handleAddPageName} style={sectionStyle}>
+        <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Page name list (for Create Order)</h2>
+        <label style={labelStyle}>เพิ่มชื่อเพจ</label>
+        <input
+          type="text"
+          value={newPageName}
+          onChange={(e) => setNewPageName(e.target.value)}
+          placeholder="เช่น เพจหลัก, เพจโปรฯ, TikTok A"
+          style={inputStyle}
+        />
+        <button type="submit" style={buttonStyle}>
+          เพิ่มชื่อเพจ
+        </button>
+        {pageNameMessage && (
+          <p style={{ marginTop: 12, color: "#fbbf24", fontSize: 13 }}>{pageNameMessage}</p>
+        )}
+        {pageNames.length > 0 && (
+          <div style={{ marginTop: 16 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>รายชื่อเพจที่มีอยู่:</p>
+            <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+              {pageNames.map((name) => (
+                <li
+                  key={name}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "4px 0",
+                    fontSize: 13,
+                  }}
+                >
+                  <span>{name}</span>
+                  <button
+                    type="button"
+                    onClick={() => handleRemovePageName(name)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#f97316",
+                      cursor: "pointer",
+                      fontSize: 12,
+                    }}
+                  >
+                    ลบ
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </form>
     </div>

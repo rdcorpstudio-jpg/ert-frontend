@@ -51,6 +51,8 @@ export default function CreateOrderPage() {
   const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
 
   const [pageName, setPageName] = useState("");
+  const [pageNameOptions, setPageNameOptions] = useState<string[]>([]);
+  const [pageNameMode, setPageNameMode] = useState<"list" | "custom">("list");
   const [paymentMethod, setPaymentMethod] = useState("");
   const [shippingMethod, setShippingMethod] = useState<"Normal" | "Special">("Normal");
   const [installmentType, setInstallmentType] = useState("");
@@ -144,6 +146,23 @@ export default function CreateOrderPage() {
     api.get("/products/freebies").then((res) => {
       setFreebies(res.data);
     });
+
+    // Load saved page names from localStorage (managed in DevPage)
+    try {
+      const raw = localStorage.getItem("pageNames");
+      if (raw) {
+        const list = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const unique = Array.from(new Set(list.map((v) => String(v).trim()).filter(Boolean)));
+          setPageNameOptions(unique);
+          if (!pageName && unique.length > 0) {
+            setPageName(unique[0]);
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   const extractNamePhone = () => {
@@ -405,13 +424,74 @@ export default function CreateOrderPage() {
 
         <div style={{ marginBottom: 30 }}>
           <label style={labelStyle}>💬 ชื่อเพจ</label>
-          <input
-            type="text"
-            value={pageName}
-            onChange={(e) => setPageName(e.target.value)}
-            placeholder="กรอกชื่อเพจที่ปิดการขาย"
-            style={inputStyle}
-          />
+          {pageNameOptions.length > 0 && pageNameMode === "list" ? (
+            <>
+              <select
+                value={pageName}
+                onChange={(e) => setPageName(e.target.value)}
+                style={inputStyle}
+              >
+                <option value="">เลือกชื่อเพจ…</option>
+                {pageNameOptions.map((name) => (
+                  <option key={name} value={name}>
+                    {name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => {
+                  setPageNameMode("custom");
+                  setPageName("");
+                }}
+                style={{
+                  marginTop: 6,
+                  padding: "6px 10px",
+                  borderRadius: 8,
+                  border: "1px solid #555",
+                  background: "#333",
+                  color: "#eee",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                กรอกชื่อเพจเอง
+              </button>
+            </>
+          ) : (
+            <>
+              <input
+                type="text"
+                value={pageName}
+                onChange={(e) => setPageName(e.target.value)}
+                placeholder="กรอกชื่อเพจที่ปิดการขาย"
+                style={inputStyle}
+              />
+              {pageNameOptions.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPageNameMode("list");
+                    if (pageNameOptions.length > 0) {
+                      setPageName(pageNameOptions[0]);
+                    }
+                  }}
+                  style={{
+                    marginTop: 6,
+                    padding: "6px 10px",
+                    borderRadius: 8,
+                    border: "1px solid #555",
+                    background: "#333",
+                    color: "#eee",
+                    fontSize: 12,
+                    cursor: "pointer",
+                  }}
+                >
+                  เลือกจากรายการที่บันทึกไว้
+                </button>
+              )}
+            </>
+          )}
         </div>
 
 
