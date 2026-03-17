@@ -54,7 +54,7 @@ export default function CreateOrderPage() {
   const [pageNameOptions, setPageNameOptions] = useState<string[]>([]);
   const [pageNameMode, setPageNameMode] = useState<"list" | "custom">("list");
   const [paymentMethod, setPaymentMethod] = useState("");
-  const [shippingMethod, setShippingMethod] = useState<"Normal" | "Special">("Normal");
+  // Shipping method is always Normal now; no selection UI.
   const [installmentType, setInstallmentType] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
   const [isUploading, setIsUploading] = useState(false);
@@ -220,7 +220,7 @@ export default function CreateOrderPage() {
         shipping_address: addressText,
         shipping_date: shippingDate || null,
         payment_method: paymentMethod || null,
-        shipping_method: shippingMethod || "Normal",
+        shipping_method: "Normal",
         invoice_text: invoiceText || null,
         note: note || null,
         shipping_note: shippingNote || null,
@@ -695,19 +695,6 @@ export default function CreateOrderPage() {
             </>
           )}
         </div>
-
-        <div style={{ marginBottom: 30 }}>
-          <label style={labelStyle}>🚚 วิธีจัดส่ง (Shipping method)</label>
-          <select
-            value={shippingMethod}
-            onChange={(e) => setShippingMethod(e.target.value as "Normal" | "Special")}
-            style={inputStyle}
-          >
-            <option value="Normal">Normal</option>
-            <option value="Special">Special</option>
-          </select>
-        </div>
-
 
         {/* ================= Upload Required ================= */}
         <div style={cardSection}>
