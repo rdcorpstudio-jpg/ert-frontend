@@ -199,40 +199,56 @@ export default function MenuPage() {
           </>
         )}
         {(role === "pack" || role === "manager") && (
-          <Link
-            to="/orders/packing"
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "#2a2a2a";
-              e.currentTarget.style.borderColor = "#2563eb";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "#252525";
-              e.currentTarget.style.borderColor = "#444";
-            }}
-          >
-            <span style={iconStyle}>📦</span>
-            <span style={labelStyle}>ออร์เดอร์ที่ต้องแพ็ควันนี้</span>
-            <span style={descStyle}>สำหรับทีมแพ็ค</span>
-          </Link>
-        )}
-        {(role === "pack" || role === "manager") && (
-          <Link
-            to="/orders/tracking"
-            style={cardStyle}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = "#2a2a2a";
-              e.currentTarget.style.borderColor = "#2563eb";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = "#252525";
-              e.currentTarget.style.borderColor = "#444";
-            }}
-          >
-            <span style={iconStyle}>🔢</span>
-            <span style={labelStyle}>กรอก Tracking Number</span>
-            <span style={descStyle}>สำหรับทีมแพ็ค</span>
-          </Link>
+          <>
+            <Link
+              to="/orders/packing"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>📦</span>
+              <span style={labelStyle}>ออร์เดอร์ที่ต้องแพ็ควันนี้</span>
+              <span style={descStyle}>สำหรับทีมแพ็ค</span>
+            </Link>
+            <Link
+              to="/orders/check-cod"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>💰</span>
+              <span style={labelStyle}>Check COD</span>
+              <span style={descStyle}>ให้ pack กดเช็คยอด COD</span>
+            </Link>
+            <Link
+              to="/orders/tracking"
+              style={cardStyle}
+              onMouseOver={(e) => {
+                e.currentTarget.style.background = "#2a2a2a";
+                e.currentTarget.style.borderColor = "#2563eb";
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.background = "#252525";
+                e.currentTarget.style.borderColor = "#444";
+              }}
+            >
+              <span style={iconStyle}>🔢</span>
+              <span style={labelStyle}>กรอก Tracking Number</span>
+              <span style={descStyle}>สำหรับทีมแพ็ค</span>
+            </Link>
+          </>
         )}
         {isManager && (
           <>

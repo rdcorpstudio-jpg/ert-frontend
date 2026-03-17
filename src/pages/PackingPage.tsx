@@ -273,20 +273,36 @@ export default function PackingPage() {
     <div style={{ padding: 24, maxWidth: 1400, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>Today’s Packing — {todayStr()}</h1>
-        <Link
-          to="/orders"
-          style={{
-            padding: "8px 14px",
-            borderRadius: 6,
-            border: "1px solid #555",
-            background: "#333",
-            color: "#eee",
-            textDecoration: "none",
-            fontSize: 14,
-          }}
-        >
-          ← Order List
-        </Link>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Link
+            to="/orders/check-cod"
+            style={{
+              padding: "8px 14px",
+              borderRadius: 6,
+              border: "1px solid #10b981",
+              background: "#10b981",
+              color: "#0f172a",
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            💰 Check COD
+          </Link>
+          <Link
+            to="/orders"
+            style={{
+              padding: "8px 14px",
+              borderRadius: 6,
+              border: "1px solid #555",
+              background: "#333",
+              color: "#eee",
+              textDecoration: "none",
+              fontSize: 14,
+            }}
+          >
+            ← Order List
+          </Link>
+        </div>
       </div>
 
       {error && (

@@ -4,6 +4,7 @@ import MenuPage from "./pages/MenuPage";
 import OrderListPage from "./pages/OrderListPage";
 import CreateOrderPage from "./pages/CreateOrderPage";
 import PackingPage from "./pages/PackingPage";
+import CheckCODPage from "./pages/CheckCODPage";
 import DevPage from "./pages/DevPage";
 import AccountantPage from "./pages/AccountantPage";
 import TrackingNumberPage from "./pages/TrackingNumberPage";
@@ -25,6 +26,7 @@ export default function AppRouter() {
         <Route path="/line-notification-setup" element={<LineNotificationSetupPage />} />
         <Route path="/orders" element={<OrderListPage />} />
         <Route path="/orders/packing" element={<PackingPage />} />
+        <Route path="/orders/check-cod" element={<CheckCODPage />} />
         <Route path="/orders/tracking" element={<TrackingNumberPage />} />
         <Route path="/orders/invoice-submit" element={<InvoiceSubmitPage />} />
         <Route path="/orders/invoice-number" element={<InvoiceNumberPage />} />
