@@ -286,6 +286,12 @@ export default function OrderListPage() {
                 📦 Packing
               </Link>
               <Link
+                to="/orders/check-cod"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                💰 Check COD
+              </Link>
+              <Link
                 to="/orders/tracking"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
               >
@@ -323,6 +329,14 @@ export default function OrderListPage() {
                   style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
                 >
                   📒 Accountant
+                </Link>
+              )}
+              {(role === "pack" || role === "manager") && (
+                <Link
+                  to="/orders/check-cod"
+                  style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+                >
+                  💰 Check COD
                 </Link>
               )}
               {canAccessTracking && (
