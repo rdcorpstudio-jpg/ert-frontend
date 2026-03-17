@@ -19,6 +19,7 @@ type OrderRow = {
   order_code: string;
   customer_name: string | null;
   sale_name?: string | null;
+  main_product_name?: string | null;
   payment_status: string;
 };
 
@@ -58,6 +59,7 @@ export default function AccountantPage() {
   const [detail, setDetail] = useState<OrderDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [paymentMethodFilter, setPaymentMethodFilter] = useState("");
+  const [productNameFilter, setProductNameFilter] = useState("");
   const [keyword, setKeyword] = useState("");
   const [sales, setSales] = useState<SaleOption[]>([]);
   const [exportOpen, setExportOpen] = useState(false);
@@ -188,56 +190,72 @@ export default function AccountantPage() {
     color: "#fff",
   };
 
-  const renderTable = (label: string, orders: OrderRow[]) => (
-    <div style={columnStyle}>
-      <div style={headerStyle}>
-        {label}
-        <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>
-          ({orders.length})
-        </span>
-      </div>
-      <div style={{ overflow: "auto", flex: 1, minHeight: 200 }}>
-        {loading ? (
-          <p style={{ padding: 16, color: "#888" }}>Loading…</p>
-        ) : (
-          <table style={tableStyle}>
-            <thead>
-              <tr>
-                <th style={thStyle}>Order ID</th>
-                <th style={thStyle}>Sale name</th>
-                <th style={thStyle}>Customer name</th>
-              </tr>
-            </thead>
-            <tbody>
-              {orders.length === 0 ? (
+  const renderTable = (label: string, orders: OrderRow[]) => {
+    const filteredOrders =
+      productNameFilter.trim()
+        ? orders.filter((o) => (o.main_product_name ?? "").trim() === productNameFilter.trim())
+        : orders;
+
+    return (
+      <div style={columnStyle}>
+        <div style={headerStyle}>
+          {label}
+          <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>
+            ({filteredOrders.length})
+          </span>
+        </div>
+        <div style={{ overflow: "auto", flex: 1, minHeight: 200 }}>
+          {loading ? (
+            <p style={{ padding: 16, color: "#888" }}>Loading…</p>
+          ) : (
+            <table style={tableStyle}>
+              <thead>
                 <tr>
-                  <td colSpan={3} style={{ ...tdStyle, textAlign: "center", color: "#666" }}>
-                    No orders
-                  </td>
+                  <th style={thStyle}>Order ID</th>
+                  <th style={thStyle}>Sale name</th>
+                  <th style={thStyle}>Customer name</th>
                 </tr>
-              ) : (
-                orders.map((row) => (
-                  <tr
-                    key={row.id}
-                    style={{ cursor: "pointer" }}
-                    onClick={() => openDetail(row.id)}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = "#252525"; }}
-                    onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
-                  >
-                    <td style={tdStyle}>{row.order_code ?? "-"}</td>
-                    <td style={tdStyle}>{row.sale_name ?? "-"}</td>
-                    <td style={tdStyle}>{row.customer_name ?? "-"}</td>
+              </thead>
+              <tbody>
+                {filteredOrders.length === 0 ? (
+                  <tr>
+                    <td colSpan={3} style={{ ...tdStyle, textAlign: "center", color: "#666" }}>
+                      No orders
+                    </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
+                ) : (
+                  filteredOrders.map((row) => (
+                    <tr
+                      key={row.id}
+                      style={{ cursor: "pointer" }}
+                      onClick={() => openDetail(row.id)}
+                      onMouseEnter={(e) => { e.currentTarget.style.background = "#252525"; }}
+                      onMouseLeave={(e) => { e.currentTarget.style.background = ""; }}
+                    >
+                      <td style={tdStyle}>{row.order_code ?? "-"}</td>
+                      <td style={tdStyle}>{row.sale_name ?? "-"}</td>
+                      <td style={tdStyle}>{row.customer_name ?? "-"}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (!canAccess) return <Navigate to="/menu" replace />;
+
+  const allProductNames: string[] = Array.from(
+    new Set(
+      Object.values(ordersByStatus)
+        .flat()
+        .map((o) => (o.main_product_name ?? "").trim())
+        .filter((name) => name.length > 0)
+    )
+  ).sort((a, b) => a.localeCompare(b));
 
   return (
     <div style={{ padding: 24, maxWidth: 1600, margin: "0 auto" }}>
@@ -317,6 +335,27 @@ export default function AccountantPage() {
           {PAYMENT_METHOD_OPTIONS.map((opt) => (
             <option key={opt.value || "all"} value={opt.value}>
               {opt.label}
+            </option>
+          ))}
+        </select>
+        <span style={{ color: "#aaa", fontSize: 14 }}>Product:</span>
+        <select
+          value={productNameFilter}
+          onChange={(e) => setProductNameFilter(e.target.value)}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#252525",
+            color: "#eee",
+            fontSize: 14,
+            minWidth: 200,
+          }}
+        >
+          <option value="">All products</option>
+          {allProductNames.map((name) => (
+            <option key={name} value={name}>
+              {name}
             </option>
           ))}
         </select>
