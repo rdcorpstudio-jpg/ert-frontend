@@ -237,56 +237,88 @@ export default function OrderListPage() {
     <div style={{ padding: 24, maxWidth: 1200, margin: "0 auto" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, flexWrap: "wrap", gap: 16 }}>
         <h1 style={{ margin: 0, fontSize: 24 }}>Order List</h1>
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          {(role === "sale" || role === "manager") && (
-            <Link
-              to="/orders/create"
-              style={{
-                ...btnPrimaryStyle,
-                textDecoration: "none",
-              }}
-            >
-              + Create Order
-            </Link>
-          )}
-          {role === "account" || role === "manager" ? (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {/* Manager: see links to all main pages */}
+          {role === "manager" && (
             <>
+              <Link
+                to="/orders/create"
+                style={{ ...btnPrimaryStyle, textDecoration: "none" }}
+              >
+                + Create Order
+              </Link>
+              <Link
+                to="/sale-summary"
+                style={{ ...btnPrimaryStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                📈 Sale Summary
+              </Link>
               <Link
                 to="/orders/accountant"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                title="Accountant view by payment status"
               >
                 📒 เช็คยอด
               </Link>
               <Link
                 to="/orders/invoice-number"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                title="Fill invoice numbers"
               >
                 🔢 กรอกเลข Invoice
               </Link>
               <Link
                 to="/orders/invoice-submit"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                title="Upload invoice for orders that require it"
               >
                 📄 อัพโหลด Invoice ให้ลูกค้า
               </Link>
               <Link
                 to="/dashboard"
                 style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                title="Revenue by status dashboard"
               >
                 📊 Dashboard
               </Link>
+              <Link
+                to="/orders/packing"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                📦 Packing
+              </Link>
+              <Link
+                to="/orders/tracking"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                🔢 Tracking
+              </Link>
+              <Link
+                to="/dev"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                ⚙️ Dev
+              </Link>
+              <Link
+                to="/line-notification-setup"
+                style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
+              >
+                💬 Line Noti
+              </Link>
             </>
-          ) : (
+          )}
+
+          {/* Non-manager roles keep their existing menus */}
+          {role !== "manager" && (
             <>
+              {(role === "sale") && (
+                <Link
+                  to="/orders/create"
+                  style={{ ...btnPrimaryStyle, textDecoration: "none" }}
+                >
+                  + Create Order
+                </Link>
+              )}
               {canAccessAccountant && (
                 <Link
                   to="/orders/accountant"
                   style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                  title="Accountant view by payment status"
                 >
                   📒 Accountant
                 </Link>
@@ -295,7 +327,6 @@ export default function OrderListPage() {
                 <Link
                   to="/orders/tracking"
                   style={{ ...btnStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                  title="Tracking numbers (Pack/Manager)"
                 >
                   🔢 Tracking
                 </Link>
@@ -304,7 +335,6 @@ export default function OrderListPage() {
                 <Link
                   to="/sale-summary"
                   style={{ ...btnPrimaryStyle, textDecoration: "none", display: "inline-flex", alignItems: "center" }}
-                  title="Sale Summary"
                 >
                   📈 Sale Summary
                 </Link>
@@ -314,7 +344,6 @@ export default function OrderListPage() {
                   onClick={handlePackingShortcut}
                   disabled={!canUsePackingShortcut}
                   style={canUsePackingShortcut ? btnPrimaryStyle : { ...btnStyle, opacity: 0.6, cursor: "not-allowed" }}
-                  title={canUsePackingShortcut ? "Today’s packing: shipping date = today, order status = Checked" : "Pack or Manager only"}
                 >
                   📦 Packing
                 </button>
