@@ -9,6 +9,7 @@ export type OrderDetail = {
   order: {
     id: number;
     order_code: string;
+    invoice_number?: string | null;
     order_status?: string;
     customer_name: string | null;
     customer_phone: string | null;
@@ -835,15 +836,9 @@ export default function OrderDetailModal({
                 <div style={{ ...value, whiteSpace: "pre-wrap" }}>{freebieNote?.trim() || "—"}</div>
               </div>
             </div>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 24, alignItems: "flex-start", marginBottom: 16 }}>
-              <div>
-                <div style={label}>Tracking number</div>
-                <div style={value}>{trackingNumber?.trim() || "—"}</div>
-              </div>
-              <div>
-                <div style={label}>Shipping method</div>
-                <div style={value}>{shippingMethod === "Special" ? "🚗 Special" : (shippingMethod || "Normal")}</div>
-              </div>
+            <div style={{ marginBottom: 16 }}>
+              <div style={label}>Tracking number</div>
+              <div style={value}>{trackingNumber?.trim() || "—"}</div>
             </div>
             {getFilesByType(files, "invoice_submit").length > 0 && (
               <>
@@ -1365,7 +1360,11 @@ export default function OrderDetailModal({
           </button>
         </div>
 
-        <div style={{ ...sectionTitle, marginTop: 24 }}>Invoice request</div>
+        <div style={{ marginTop: 24 }}>
+          <div style={label}>Invoice number</div>
+          <div style={value}>{detail?.order?.invoice_number?.trim() || "—"}</div>
+        </div>
+        <div style={{ ...sectionTitle, marginTop: 16 }}>Invoice request</div>
         <div style={label}>📄 ต้องการใบกำกับภาษี?</div>
         <select
           value={invoiceRequired ? "yes" : "no"}
