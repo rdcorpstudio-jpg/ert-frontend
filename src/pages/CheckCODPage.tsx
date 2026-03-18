@@ -39,7 +39,7 @@ export default function CheckCODPage() {
       .get<CodRow[]>("/orders", {
         params: {
           payment_status: "Unchecked",
-          payment_method: ["cod"],
+          payment_method: "cod",
           sort_by: "oldest",
         },
       })
