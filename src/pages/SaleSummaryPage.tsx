@@ -14,6 +14,7 @@ type RevenueBySaleItem = {
 type BreakdownItem = {
   name: string;
   revenue: number;
+  pcs?: number;
 };
 
 type StatusBreakdownItem = {
@@ -59,6 +60,9 @@ export default function SaleSummaryPage() {
       maximumFractionDigits: 2,
     })}`;
 
+  const formatPcs = (pcs?: number) =>
+    typeof pcs === "number" ? ` (${pcs.toLocaleString("th-TH")} pcs)` : "";
+
   const fetchBreakdown = (saleId: number, from?: string, to?: string) => {
     const params: Record<string, string | number> = { sale_id: saleId };
     if (from?.trim()) params.created_from = from.trim();
@@ -84,11 +88,17 @@ export default function SaleSummaryPage() {
 
     Promise.all([breakdownReq, topProductsReq])
       .then(([resB, resP]) => {
+        const categories = Array.isArray(resB.data?.categories)
+          ? resB.data.categories
+          : [];
+        const pages = Array.isArray(resB.data?.pages) ? resB.data.pages : [];
+
+        // Ensure card lists are always sorted by revenue (desc)
         setCategoryBreakdown(
-          Array.isArray(resB.data?.categories) ? resB.data.categories : []
+          [...categories].sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
         );
         setPageBreakdown(
-          Array.isArray(resB.data?.pages) ? resB.data.pages : []
+          [...pages].sort((a, b) => (b.revenue || 0) - (a.revenue || 0))
         );
         setStatusBreakdown(
           Array.isArray(resB.data?.statuses) ? resB.data.statuses : []
@@ -794,6 +804,7 @@ export default function SaleSummaryPage() {
                         <span>{c.name || "—"}</span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(c.revenue ?? 0)}
+                          {formatPcs(c.pcs)}
                         </span>
                       </li>
                     ))}
@@ -842,6 +853,7 @@ export default function SaleSummaryPage() {
                         <span>{p.name || "—"}</span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(p.revenue ?? 0)}
+                          {formatPcs(p.pcs)}
                         </span>
                       </li>
                     ))}
@@ -890,6 +902,7 @@ export default function SaleSummaryPage() {
                         <span>{p.name || "—"}</span>
                         <span style={{ color: "#fbbf24" }}>
                           {formatBath(p.revenue ?? 0)}
+                          {formatPcs(p.pcs)}
                         </span>
                       </li>
                     ))}
