@@ -107,11 +107,11 @@ export default function SaleSummaryPage() {
           Array.isArray(resB.data?.shipping_methods) ? resB.data.shipping_methods : []
         );
         const items = Array.isArray(resP.data?.items) ? resP.data.items : [];
-        // sort by revenue desc and keep top 5
+        // sort by revenue desc (list all sold products)
         const sorted = [...items].sort(
           (a, b) => (b.revenue || 0) - (a.revenue || 0)
         );
-        setTopProducts(sorted.slice(0, 5));
+        setTopProducts(sorted);
       })
       .catch(() => {
         setCategoryBreakdown([]);
@@ -827,7 +827,7 @@ export default function SaleSummaryPage() {
                     marginBottom: 8,
                   }}
                 >
-                  Top products
+                  Products
                 </div>
                 {topProducts.length === 0 ? (
                   <div style={{ fontSize: 12, color: "#9ca3af" }}>—</div>
