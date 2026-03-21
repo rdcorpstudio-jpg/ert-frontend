@@ -186,11 +186,13 @@ export default function CreateOrderPage() {
   };
 
   const hasValidItem = items.some((i) => i.product_id !== 0);
+  const hasIncompleteItem = items.some((i) => i.product_id === 0);
 
   const isSubmitDisabled =
     !chatFile ||
     !slipFile ||
     !hasValidItem ||
+    hasIncompleteItem ||
     !pageName.trim() ||
     !paymentMethod;
 
@@ -235,7 +237,8 @@ export default function CreateOrderPage() {
         });
       }
 
-      for (const item of items) {
+      const validItems = items.filter((item) => item.product_id !== 0);
+      for (const item of validItems) {
         await api.post(`/orders/${orderId}/items`, null, {
           params: {
             product_id: item.product_id,
@@ -743,7 +746,7 @@ export default function CreateOrderPage() {
 
         {isSubmitDisabled && !isUploading && (
           <p style={{ marginTop: 20, fontSize: 13, color: "#9ca3af" }}>
-            กรุณากรอกให้ครบ: ชื่อเพจ, ช่องทางชำระเงิน, เพิ่มสินค้าอย่างน้อย 1 รายการและเลือกสินค้า, อัปโหลด Chat และ Slip
+            กรุณากรอกให้ครบ: ชื่อเพจ, ช่องทางชำระเงิน, เพิ่มสินค้าอย่างน้อย 1 รายการและเลือกสินค้าให้ครบทุกบรรทัด, อัปโหลด Chat และ Slip
           </p>
         )}
         <button
