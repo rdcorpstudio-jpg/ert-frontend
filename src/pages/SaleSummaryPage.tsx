@@ -48,6 +48,8 @@ export default function SaleSummaryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedSaleName, setSelectedSaleName] = useState<string | null>(null);
+  /** Manager: "All sales" in Focus dropdown — keep breakdown across refetch (Apply range / quick dates). */
+  const [managerFocusAllSales, setManagerFocusAllSales] = useState(false);
   const [categoryBreakdown, setCategoryBreakdown] = useState<BreakdownItem[]>([]);
   const [pageBreakdown, setPageBreakdown] = useState<BreakdownItem[]>([]);
   const [statusBreakdown, setStatusBreakdown] = useState<StatusBreakdownItem[]>([]);
@@ -63,8 +65,9 @@ export default function SaleSummaryPage() {
   const formatPcs = (pcs?: number) =>
     typeof pcs === "number" ? ` (${pcs.toLocaleString("th-TH")} pcs)` : "";
 
-  const fetchBreakdown = (saleId: number, from?: string, to?: string) => {
-    const params: Record<string, string | number> = { sale_id: saleId };
+  const fetchBreakdown = (saleId: number | null, from?: string, to?: string) => {
+    const params: Record<string, string | number> = {};
+    if (saleId != null) params.sale_id = saleId;
     if (from?.trim()) params.created_from = from.trim();
     if (to?.trim()) params.created_to = to.trim();
     const breakdownReq = api.get<{
@@ -81,7 +84,7 @@ export default function SaleSummaryPage() {
           created_from: from?.trim() || undefined,
           created_to: to?.trim() || undefined,
           group_by: "product_name",
-          sale_id: saleId,
+          ...(saleId != null ? { sale_id: saleId } : {}),
         },
       }
     );
@@ -135,6 +138,11 @@ export default function SaleSummaryPage() {
     const applySelectionAndBreakdown = (list: RevenueBySaleItem[]) => {
       setItems(list);
       if (role === "manager") {
+        if (managerFocusAllSales) {
+          setSelectedSaleName(null);
+          fetchBreakdown(null, from, to);
+          return;
+        }
         let targetName = selectedSaleName;
         if (targetName && !list.some((it) => it.name === targetName)) {
           targetName = null;
@@ -590,9 +598,20 @@ export default function SaleSummaryPage() {
               value={selectedSaleName ?? ""}
               onChange={(e) => {
                 const value = e.target.value || null;
+                if (!value) {
+                  setManagerFocusAllSales(true);
+                  setSelectedSaleName(null);
+                  fetchBreakdown(
+                    null,
+                    dateFrom || undefined,
+                    dateTo || undefined
+                  );
+                  return;
+                }
+                setManagerFocusAllSales(false);
                 setSelectedSaleName(value);
                 const target = items.find((it) => it.name === value);
-                if (value && target?.sale_id != null) {
+                if (target?.sale_id != null) {
                   fetchBreakdown(
                     target.sale_id,
                     dateFrom || undefined,
@@ -603,6 +622,7 @@ export default function SaleSummaryPage() {
                   setPageBreakdown([]);
                   setStatusBreakdown([]);
                   setShippingMethodBreakdown([]);
+                  setTopProducts([]);
                 }
               }}
               style={{
@@ -672,7 +692,11 @@ export default function SaleSummaryPage() {
                 key={it.name || "-"}
                 style={{
                   ...cardStyle,
-                  ...(role === "sale" || it.name === selectedSaleName
+                  ...(role === "sale" ||
+                  (role === "manager" &&
+                    (managerFocusAllSales
+                      ? true
+                      : selectedSaleName && it.name === selectedSaleName))
                     ? highlightedCard
                     : null),
                 }}
@@ -754,8 +778,8 @@ export default function SaleSummaryPage() {
             ))}
           </div>
 
-          {/* Row 2: for the focused sale, show separate breakdown cards */}
-          {saleCards.length === 1 && (
+          {/* Row 2: breakdown — one sale (sale role / manager focused) or all sales (manager "All sales") */}
+          {items.length > 0 && (role === "sale" || role === "manager") && (
             <div
               style={{
                 display: "flex",
