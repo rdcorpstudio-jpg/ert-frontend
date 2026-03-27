@@ -126,11 +126,14 @@ export default function OrderDetailModal({
   const [shippingMethod, setShippingMethod] = useState<string>("Normal");
   const [savingShippingMethod, setSavingShippingMethod] = useState(false);
   const [slipUploading, setSlipUploading] = useState(false);
+  const [invoiceSubmitUploading, setInvoiceSubmitUploading] = useState(false);
   const slipFileInputRef = useRef<HTMLInputElement>(null);
+  const invoiceSubmitFileInputRef = useRef<HTMLInputElement>(null);
   type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const userRole = getUserRole();
   const isManager = userRole === "manager";
+  const canReplaceInvoiceSubmit = userRole === "account" || userRole === "manager";
   const tabList: TabId[] = isManager
     ? ["overview", "customer", "order", "payment", "shipping", "manager"]
     : ["overview", "customer", "order", "payment", "shipping"];
@@ -425,6 +428,28 @@ export default function OrderDetailModal({
       alert(res?.data?.detail ?? "Failed to upload slip.");
     } finally {
       setSlipUploading(false);
+    }
+  };
+
+  const handleInvoiceSubmitFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !detail?.order?.id) return;
+    setInvoiceSubmitUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file_type", "invoice_submit");
+      form.append("file", file);
+      await api.post(`/orders/${detail.order.id}/upload-file`, form);
+      if (invoiceSubmitFileInputRef.current) invoiceSubmitFileInputRef.current.value = "";
+      await onReload();
+    } catch (err: unknown) {
+      const res =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { detail?: string } } }).response
+          : undefined;
+      alert(res?.data?.detail ?? "Failed to upload invoice file.");
+    } finally {
+      setInvoiceSubmitUploading(false);
     }
   };
 
@@ -1364,6 +1389,56 @@ export default function OrderDetailModal({
           <div style={label}>Invoice number</div>
           <div style={value}>{detail?.order?.invoice_number?.trim() || "—"}</div>
         </div>
+        <div style={{ ...sectionTitle, marginTop: 16 }}>Invoice file (submitted)</div>
+        {getFilesByType(files, "invoice_submit").length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+            {getFilesByType(files, "invoice_submit").map((f, i) => (
+              <a
+                key={f.id ?? i}
+                href={f.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  color: "#3b82f6",
+                  fontSize: 14,
+                  textDecoration: "none",
+                }}
+              >
+                📄 View invoice file {getFilesByType(files, "invoice_submit").length > 1 ? `#${i + 1}` : ""}
+              </a>
+            ))}
+          </div>
+        ) : (
+          <div style={{ ...value, marginBottom: 8 }}>—</div>
+        )}
+        {canReplaceInvoiceSubmit && (
+          <div style={{ marginBottom: 8, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <input
+              ref={invoiceSubmitFileInputRef}
+              type="file"
+              accept="image/*,.pdf"
+              style={{ display: "none" }}
+              onChange={handleInvoiceSubmitFileChange}
+            />
+            <button
+              type="button"
+              disabled={invoiceSubmitUploading}
+              onClick={() => invoiceSubmitFileInputRef.current?.click()}
+              style={saveBtn}
+            >
+              {invoiceSubmitUploading
+                ? "Uploading…"
+                : getFileByType(files, "invoice_submit")
+                ? "Replace invoice file"
+                : "Upload invoice file"}
+            </button>
+            <span style={{ fontSize: 12, color: "#9ca3af" }}>
+              {getFileByType(files, "invoice_submit")
+                ? "Replaces the current invoice file."
+                : "Adds invoice file."}
+            </span>
+          </div>
+        )}
         <div style={{ ...sectionTitle, marginTop: 16 }}>Invoice request</div>
         <div style={label}>📄 ต้องการใบกำกับภาษี?</div>
         <select
