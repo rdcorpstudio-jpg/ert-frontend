@@ -133,6 +133,7 @@ export default function OrderDetailModal({
   const [savingShippingMethod, setSavingShippingMethod] = useState(false);
   const [slipUploading, setSlipUploading] = useState(false);
   const [invoiceSubmitUploading, setInvoiceSubmitUploading] = useState(false);
+  const [deletingInvoiceSubmitFileId, setDeletingInvoiceSubmitFileId] = useState<number | null>(null);
   const slipFileInputRef = useRef<HTMLInputElement>(null);
   const invoiceSubmitFileInputRef = useRef<HTMLInputElement>(null);
   type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
@@ -456,6 +457,21 @@ export default function OrderDetailModal({
       alert(res?.data?.detail ?? "Failed to upload invoice file.");
     } finally {
       setInvoiceSubmitUploading(false);
+    }
+  };
+
+  const handleDeleteInvoiceSubmitFile = async (fileId?: number) => {
+    if (!detail?.order?.id || !fileId) return;
+    if (!isManager) return;
+    if (!window.confirm("Delete this submitted invoice file?")) return;
+    setDeletingInvoiceSubmitFileId(fileId);
+    try {
+      await api.delete(`/orders/${detail.order.id}/invoice-submit-files/${fileId}`);
+      await onReload();
+    } catch {
+      alert("Failed to delete invoice file.");
+    } finally {
+      setDeletingInvoiceSubmitFileId(null);
     }
   };
 
@@ -1399,19 +1415,38 @@ export default function OrderDetailModal({
         {getFilesByType(files, "invoice_submit").length > 0 ? (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
             {getFilesByType(files, "invoice_submit").map((f, i) => (
-              <a
-                key={f.id ?? i}
-                href={f.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: "#3b82f6",
-                  fontSize: 14,
-                  textDecoration: "none",
-                }}
-              >
-                📄 View invoice file {getFilesByType(files, "invoice_submit").length > 1 ? `#${i + 1}` : ""}
-              </a>
+              <div key={f.id ?? i} style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+                <a
+                  href={f.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    color: "#3b82f6",
+                    fontSize: 14,
+                    textDecoration: "none",
+                  }}
+                >
+                  📄 View invoice file {getFilesByType(files, "invoice_submit").length > 1 ? `#${i + 1}` : ""}
+                </a>
+                {isManager && (
+                  <button
+                    type="button"
+                    onClick={() => void handleDeleteInvoiceSubmitFile(f.id)}
+                    disabled={!f.id || deletingInvoiceSubmitFileId === f.id}
+                    title="Delete invoice file"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      color: "#f87171",
+                      cursor: !f.id || deletingInvoiceSubmitFileId === f.id ? "not-allowed" : "pointer",
+                      fontSize: 14,
+                      padding: 0,
+                    }}
+                  >
+                    {deletingInvoiceSubmitFileId === f.id ? "Deleting..." : "❌"}
+                  </button>
+                )}
+              </div>
             ))}
           </div>
         ) : (
