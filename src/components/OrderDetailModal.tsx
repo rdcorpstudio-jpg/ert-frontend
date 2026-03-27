@@ -67,8 +67,14 @@ function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
     if (!token) return "";
-    const payload = JSON.parse(atob(token.split(".")[1]));
-    return String((payload?.role as string) ?? "").trim().toLowerCase();
+    const parts = token.split(".");
+    if (parts.length < 2) return "";
+    const base64Url = parts[1];
+    const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64 + "=".repeat((4 - (base64.length % 4)) % 4);
+    const payload = JSON.parse(atob(padded));
+    const rawRole = (payload?.role ?? payload?.Role ?? "") as string;
+    return String(rawRole).trim().toLowerCase();
   } catch {
     return "";
   }
