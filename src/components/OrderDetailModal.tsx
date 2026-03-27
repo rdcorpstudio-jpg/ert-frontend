@@ -1441,6 +1441,9 @@ export default function OrderDetailModal({
                       cursor: !f.id || deletingInvoiceSubmitFileId === f.id ? "not-allowed" : "pointer",
                       fontSize: 14,
                       padding: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      lineHeight: 1,
                     }}
                   >
                     {deletingInvoiceSubmitFileId === f.id ? "Deleting..." : "❌"}
