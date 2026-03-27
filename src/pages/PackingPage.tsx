@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
+import { fetchOrdersAllPages } from "../services/ordersList";
 import OrderDetailModal, { type OrderDetail } from "../components/OrderDetailModal";
 
 type OrderRow = {
@@ -69,16 +70,17 @@ export default function PackingPage() {
     }).catch(() => setProductCategories([]));
   }, [canAccess]);
 
-  const buildParams = (orderStatus: string) => {
+  const buildParams = (orderStatus: string): Record<string, string | string[] | undefined> => {
     const today = todayStr();
-    const p = new URLSearchParams();
-    p.set("shipping_date", today);
-    p.set("sort_by", "oldest");
-    p.set("order_status", orderStatus);
-    p.set("shipping_method", "Normal");
-    selectedCategories.forEach((c) => p.append("product_category", c));
-    selectedPaymentMethods.forEach((m) => p.append("payment_method", m));
-    return p;
+    const o: Record<string, string | string[] | undefined> = {
+      shipping_date: today,
+      sort_by: "oldest",
+      order_status: orderStatus,
+      shipping_method: "Normal",
+    };
+    if (selectedCategories.length) o.product_category = [...selectedCategories];
+    if (selectedPaymentMethods.length) o.payment_method = [...selectedPaymentMethods];
+    return o;
   };
 
   useEffect(() => {
@@ -87,21 +89,27 @@ export default function PackingPage() {
     setLoading(true);
     setError(null);
     Promise.all([
-      api.get<OrderRow[]>("/orders", { params: buildParams("Pending") }),
-      api.get<OrderRow[]>("/orders", { params: buildParams("Checked") }),
-      api.get<OrderRow[]>("/orders", { params: buildParams("Packing") }),
-      api.get<OrderRow[]>("/orders", { params: buildParams("Shipped") }),
+      fetchOrdersAllPages<OrderRow>(buildParams("Pending")),
+      fetchOrdersAllPages<OrderRow>(buildParams("Checked")),
+      fetchOrdersAllPages<OrderRow>(buildParams("Packing")),
+      fetchOrdersAllPages<OrderRow>(buildParams("Shipped")),
     ])
       .then(([a, b, c, d]) => {
         if (cancelled) return;
-        setPendingOrders(Array.isArray(a.data) ? a.data : []);
-        setCheckedOrders(Array.isArray(b.data) ? b.data : []);
-        setPackingOrders(Array.isArray(c.data) ? c.data : []);
-        setShippedOrders(Array.isArray(d.data) ? d.data : []);
+        setPendingOrders(a);
+        setCheckedOrders(b);
+        setPackingOrders(c);
+        setShippedOrders(d);
       })
-      .catch(() => { if (!cancelled) setError("Failed to load orders."); })
-      .finally(() => { if (!cancelled) setLoading(false); });
-    return () => { cancelled = true; };
+      .catch(() => {
+        if (!cancelled) setError("Failed to load orders.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [canAccess, selectedCategories, selectedPaymentMethods]);
 
   const openDetail = async (orderId: number) => {
@@ -130,15 +138,15 @@ export default function PackingPage() {
       const { data } = await api.get<OrderDetail>(`/orders/${selectedOrderId}`);
       setDetail(data);
       const [a, b, c, d] = await Promise.all([
-        api.get<OrderRow[]>("/orders", { params: buildParams("Pending") }),
-        api.get<OrderRow[]>("/orders", { params: buildParams("Checked") }),
-        api.get<OrderRow[]>("/orders", { params: buildParams("Packing") }),
-        api.get<OrderRow[]>("/orders", { params: buildParams("Shipped") }),
+        fetchOrdersAllPages<OrderRow>(buildParams("Pending")),
+        fetchOrdersAllPages<OrderRow>(buildParams("Checked")),
+        fetchOrdersAllPages<OrderRow>(buildParams("Packing")),
+        fetchOrdersAllPages<OrderRow>(buildParams("Shipped")),
       ]);
-      setPendingOrders(Array.isArray(a.data) ? a.data : []);
-      setCheckedOrders(Array.isArray(b.data) ? b.data : []);
-      setPackingOrders(Array.isArray(c.data) ? c.data : []);
-      setShippedOrders(Array.isArray(d.data) ? d.data : []);
+      setPendingOrders(a);
+      setCheckedOrders(b);
+      setPackingOrders(c);
+      setShippedOrders(d);
     } catch {
       setError("Failed to reload.");
     }

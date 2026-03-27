@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import OrderDetailModal, { type OrderDetail } from "../components/OrderDetailModal";
@@ -29,8 +29,12 @@ type OrderRow = {
 
 type SortBy = "newest" | "oldest";
 
+const PAGE_SIZE = 50;
+
 export default function OrderListPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
@@ -39,67 +43,29 @@ export default function OrderListPage() {
 
   // Filters & sort
   const [keyword, setKeyword] = useState("");
+  const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [orderStatus, setOrderStatus] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
   const [hasAlert, setHasAlert] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [shippingDate, setShippingDate] = useState(""); // YYYY-MM-DD for filter
 
-  const fetchOrders = async (overrides?: {
-    keyword?: string;
-    order_status?: string;
-    payment_status?: string;
-    has_alert?: boolean;
-    sort_by?: SortBy;
-    shipping_date?: string;
-  }) => {
-    const k = overrides?.keyword !== undefined ? overrides.keyword : keyword;
-    const os = overrides?.order_status !== undefined ? overrides.order_status : orderStatus;
-    const ps = overrides?.payment_status !== undefined ? overrides.payment_status : paymentStatus;
-    const ha = overrides?.has_alert !== undefined ? overrides.has_alert : hasAlert;
-    const sb = overrides?.sort_by !== undefined ? overrides.sort_by : sortBy;
-    const sd = overrides?.shipping_date !== undefined ? overrides.shipping_date : shippingDate;
-    const role = getUserRole();
-    const params: Record<string, string | boolean | undefined> = {
-      keyword: String(k).trim() || undefined,
-      order_status: os || undefined,
-      payment_status: ps || undefined,
-      has_alert: ha || undefined,
-      sort_by: sb,
-      shipping_date: sd || undefined,
-    };
-    if (role === "sale") params.only_my = true;
-    setLoading(true);
-    setError(null);
-    try {
-      const { data } = await api.get<OrderRow[]>("/orders", {
-        params,
-      });
-      setOrders(Array.isArray(data) ? data : []);
-    } catch (e) {
-      setError("Failed to load orders.");
-      setOrders([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Initial load and refetch when filter, sort, or shipping_date changes
   useEffect(() => {
-    fetchOrders();
-  }, [orderStatus, paymentStatus, sortBy, hasAlert, shippingDate]);
+    const t = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 350);
+    return () => window.clearTimeout(t);
+  }, [keyword]);
 
-  const handleSearch = () => fetchOrders();
-
-  const handleClearFilters = () => {
-    setKeyword("");
-    setOrderStatus("");
-    setPaymentStatus("");
-    setHasAlert(false);
-    setShippingDate("");
-    setSortBy("newest");
-    fetchOrders({ keyword: "", order_status: "", payment_status: "", has_alert: false, shipping_date: "", sort_by: "newest" });
-  };
+  const prevDebouncedRef = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (prevDebouncedRef.current === undefined) {
+      prevDebouncedRef.current = debouncedKeyword;
+      return;
+    }
+    if (prevDebouncedRef.current !== debouncedKeyword) {
+      setPage(1);
+      prevDebouncedRef.current = debouncedKeyword;
+    }
+  }, [debouncedKeyword]);
 
   const getUserRole = (): string => {
     try {
@@ -111,6 +77,69 @@ export default function OrderListPage() {
       return "";
     }
   };
+
+  const loadOrders = useCallback(async () => {
+    const role = getUserRole();
+    const params: Record<string, string | boolean | number | undefined> = {
+      page,
+      page_size: PAGE_SIZE,
+      keyword: debouncedKeyword || undefined,
+      order_status: orderStatus || undefined,
+      payment_status: paymentStatus || undefined,
+      has_alert: hasAlert || undefined,
+      sort_by: sortBy,
+      shipping_date: shippingDate || undefined,
+    };
+    if (role === "sale") params.only_my = true;
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await api.get<{
+        items: OrderRow[];
+        total: number;
+        page: number;
+        page_size: number;
+      }>("/orders", { params });
+      setOrders(Array.isArray(data.items) ? data.items : []);
+      setTotal(typeof data.total === "number" ? data.total : 0);
+    } catch {
+      setError("Failed to load orders.");
+      setOrders([]);
+      setTotal(0);
+    } finally {
+      setLoading(false);
+    }
+  }, [page, debouncedKeyword, orderStatus, paymentStatus, sortBy, hasAlert, shippingDate]);
+
+  useEffect(() => {
+    void loadOrders();
+  }, [loadOrders]);
+
+  useEffect(() => {
+    const tp = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    if (page > tp) setPage(tp);
+  }, [total, page]);
+
+  const handleSearch = (e: FormEvent) => {
+    e.preventDefault();
+    const k = keyword.trim();
+    setDebouncedKeyword(k);
+    setPage(1);
+    prevDebouncedRef.current = k;
+  };
+
+  const handleClearFilters = () => {
+    setKeyword("");
+    setDebouncedKeyword("");
+    prevDebouncedRef.current = "";
+    setOrderStatus("");
+    setPaymentStatus("");
+    setHasAlert(false);
+    setShippingDate("");
+    setSortBy("newest");
+    setPage(1);
+  };
+
   const role = getUserRole();
   const canUsePackingShortcut = role === "pack" || role === "manager";
   const canAccessAccountant = role === "account" || role === "manager";
@@ -151,7 +180,7 @@ export default function OrderListPage() {
     try {
       const { data } = await api.get<OrderDetail>(`/orders/${selectedOrderId}`);
       setDetail(data);
-      await fetchOrders();
+      await loadOrders();
     } catch {
       setError("Failed to reload.");
     }
@@ -202,6 +231,8 @@ export default function OrderListPage() {
       ⚠️
     </span>
   );
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const filterBarStyle: React.CSSProperties = {
     display: "flex",
@@ -366,7 +397,7 @@ export default function OrderListPage() {
               )}
             </>
           )}
-          <button type="button" onClick={() => fetchOrders()} style={btnStyle} title="Reload list">
+          <button type="button" onClick={() => void loadOrders()} style={btnStyle} title="Reload list">
             🔄 Refresh
           </button>
           <Link
@@ -383,13 +414,7 @@ export default function OrderListPage() {
       </div>
 
       {/* Filters + Search */}
-      <form
-        style={filterBarStyle}
-        onSubmit={(e) => {
-          e.preventDefault();
-          handleSearch();
-        }}
-      >
+      <form style={filterBarStyle} onSubmit={handleSearch}>
         <input
           type="text"
           placeholder="Search order ID, name, phone, tracking"
@@ -399,7 +424,10 @@ export default function OrderListPage() {
         />
         <select
           value={orderStatus}
-          onChange={(e) => setOrderStatus(e.target.value)}
+          onChange={(e) => {
+            setOrderStatus(e.target.value);
+            setPage(1);
+          }}
           style={selectStyle}
         >
           <option value="">All order status</option>
@@ -414,7 +442,10 @@ export default function OrderListPage() {
         </select>
         <select
           value={paymentStatus}
-          onChange={(e) => setPaymentStatus(e.target.value)}
+          onChange={(e) => {
+            setPaymentStatus(e.target.value);
+            setPage(1);
+          }}
           style={selectStyle}
         >
           <option value="">All payment status</option>
@@ -436,7 +467,10 @@ export default function OrderListPage() {
           <input
             type="checkbox"
             checked={hasAlert}
-            onChange={(e) => setHasAlert(e.target.checked)}
+            onChange={(e) => {
+              setHasAlert(e.target.checked);
+              setPage(1);
+            }}
           />
           Has alert
         </label>
@@ -497,7 +531,7 @@ export default function OrderListPage() {
                     onMouseEnter={() => setHoveredRowId(rowData.id)}
                     onMouseLeave={() => setHoveredRowId(null)}
                   >
-                    <td style={td}>{index + 1}</td>
+                    <td style={td}>{(page - 1) * PAGE_SIZE + index + 1}</td>
                     <td style={td}>
                       <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
                         {rowData.order_code ?? "-"}
@@ -566,6 +600,46 @@ export default function OrderListPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {!loading && total > 0 && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            flexWrap: "wrap",
+            gap: 12,
+            marginTop: 16,
+            color: "#ccc",
+            fontSize: 14,
+          }}
+        >
+          <span>
+            Showing {(page - 1) * PAGE_SIZE + 1}–{Math.min((page - 1) * PAGE_SIZE + orders.length, total)} of {total}
+          </span>
+          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <button
+              type="button"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              style={page <= 1 ? { ...btnStyle, opacity: 0.5, cursor: "not-allowed" } : btnStyle}
+            >
+              Previous
+            </button>
+            <span style={{ minWidth: 120, textAlign: "center" }}>
+              Page {page} / {totalPages}
+            </span>
+            <button
+              type="button"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+              style={page >= totalPages ? { ...btnStyle, opacity: 0.5, cursor: "not-allowed" } : btnStyle}
+            >
+              Next
+            </button>
+          </div>
         </div>
       )}
 

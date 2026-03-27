@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import api from "../services/api";
+import { fetchOrdersAllPages } from "../services/ordersList";
 import OrderDetailModal, { type OrderDetail } from "../components/OrderDetailModal";
 
 type OrderRow = {
@@ -43,16 +44,20 @@ export default function InvoiceSubmitPage() {
     setLoading(true);
     setError(null);
     Promise.all([
-      api.get<OrderRow[]>("/orders", {
-        params: { invoice_required: true, has_invoice_file: false, sort_by: "oldest" },
+      fetchOrdersAllPages<OrderRow>({
+        invoice_required: true,
+        has_invoice_file: false,
+        sort_by: "oldest",
       }),
-      api.get<OrderRow[]>("/orders", {
-        params: { invoice_required: true, has_invoice_file: true, sort_by: "oldest" },
+      fetchOrdersAllPages<OrderRow>({
+        invoice_required: true,
+        has_invoice_file: true,
+        sort_by: "oldest",
       }),
     ])
-      .then(([waitRes, doneRes]) => {
-        setWaitingOrders(Array.isArray(waitRes.data) ? waitRes.data : []);
-        setDoneOrders(Array.isArray(doneRes.data) ? doneRes.data : []);
+      .then(([waiting, done]) => {
+        setWaitingOrders(waiting);
+        setDoneOrders(done);
       })
       .catch(() => setError("Failed to load orders."))
       .finally(() => setLoading(false));

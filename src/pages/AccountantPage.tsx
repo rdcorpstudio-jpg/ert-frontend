@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import api from "../services/api";
+import { fetchOrdersAllPages } from "../services/ordersList";
 import OrderDetailModal, { type OrderDetail } from "../components/OrderDetailModal";
 
 function getUserRole(): string {
@@ -80,19 +81,19 @@ export default function AccountantPage() {
     setError(null);
     Promise.all(
       PAYMENT_COLUMNS.map(({ key }) => {
-        const params: Record<string, string> = {
+        const params: Record<string, string | undefined> = {
           payment_status: key,
           sort_by: "oldest",
         };
         if (paymentMethodFilter) params.payment_method = paymentMethodFilter;
         if (keyword.trim()) params.keyword = keyword.trim();
-        return api.get<OrderRow[]>("/orders", { params });
+        return fetchOrdersAllPages<OrderRow>(params);
       })
     )
       .then((results) => {
         const next: Record<string, OrderRow[]> = {};
         PAYMENT_COLUMNS.forEach(({ key }, i) => {
-          next[key] = Array.isArray(results[i].data) ? results[i].data : [];
+          next[key] = results[i] ?? [];
         });
         setOrdersByStatus(next);
       })

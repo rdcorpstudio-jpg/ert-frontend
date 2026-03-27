@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import api from "../services/api";
+import { fetchOrdersAllPages } from "../services/ordersList";
 import OrderDetailModal, { type OrderDetail } from "../components/OrderDetailModal";
 
 const TRACKING_STATUSES = ["Shipped", "Success", "Fail", "Return Received"];
@@ -48,15 +49,18 @@ export default function TrackingNumberPage() {
     setError(null);
     Promise.all(
       TRACKING_STATUSES.map((status) =>
-        api.get<OrderRow[]>("/orders", {
-          params: { order_status: status, sort_by: "oldest", has_tracking_number: false, shipping_method: "Normal" },
+        fetchOrdersAllPages<OrderRow>({
+          order_status: status,
+          sort_by: "oldest",
+          has_tracking_number: false,
+          shipping_method: "Normal",
         })
       )
     )
       .then((results) => {
         const byId = new Map<number, OrderRow>();
-        results.forEach((r) => {
-          (Array.isArray(r.data) ? r.data : []).forEach((row) => byId.set(row.id, row));
+        results.forEach((rows) => {
+          rows.forEach((row) => byId.set(row.id, row));
         });
         setOrders(Array.from(byId.values()).sort((a, b) => a.id - b.id));
       })

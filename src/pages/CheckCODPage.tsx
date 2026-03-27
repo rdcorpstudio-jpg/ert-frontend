@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import api from "../services/api";
+import { fetchOrdersAllPages } from "../services/ordersList";
 
 type CodRow = {
   id: number;
@@ -35,16 +36,13 @@ export default function CheckCODPage() {
     if (!canAccess) return;
     setLoading(true);
     setError(null);
-    api
-      .get<CodRow[]>("/orders", {
-        params: {
-          payment_status: "Unchecked",
-          payment_method: "cod",
-          sort_by: "oldest",
-        },
-      })
-      .then((res) => {
-        setRows(Array.isArray(res.data) ? res.data : []);
+    fetchOrdersAllPages<CodRow>({
+      payment_status: "Unchecked",
+      payment_method: "cod",
+      sort_by: "oldest",
+    })
+      .then((list) => {
+        setRows(list);
       })
       .catch(() => setError("Failed to load COD orders."))
       .finally(() => setLoading(false));
