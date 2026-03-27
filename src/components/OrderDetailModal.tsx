@@ -480,11 +480,14 @@ export default function OrderDetailModal({
     const u = Number(unitPrice);
     if (d < 0.01) return "";
     if (u >= 0.01) {
-      const r = d / u;
-      if (Math.abs(r - 0.05) < 0.001) return "5";
-      if (Math.abs(r - 0.1) < 0.001) return "10";
-      if (Math.abs(r - 0.15) < 0.001) return "15";
-      if (Math.abs(r - 0.2) < 0.001) return "20";
+      // Be tolerant to float precision so pre-saved percentage discounts map back reliably.
+      const matchPct = (pct: number) =>
+        Math.abs(d - Math.round(u * pct * 100) / 100) <= 0.5 || Math.abs(d / u - pct) < 0.005;
+      if (matchPct(0.05)) return "5";
+      if (matchPct(0.08)) return "8";
+      if (matchPct(0.1)) return "10";
+      if (matchPct(0.15)) return "15";
+      if (matchPct(0.2)) return "20";
     }
     if (d >= 999 && d <= 1001) return "1000";
     return "";
@@ -494,6 +497,7 @@ export default function OrderDetailModal({
     const u = Number(unitPrice);
     if (option === "" || option === "0") return 0;
     if (option === "5") return u * 0.05;
+    if (option === "8") return u * 0.08;
     if (option === "10") return u * 0.1;
     if (option === "15") return u * 0.15;
     if (option === "20") return u * 0.2;
@@ -1135,6 +1139,7 @@ export default function OrderDetailModal({
                       >
                         <option value="">-- ส่วนลด --</option>
                         <option value="5">5%</option>
+                        <option value="8">8%</option>
                         <option value="10">10%</option>
                         <option value="15">15%</option>
                         <option value="20">20%</option>
