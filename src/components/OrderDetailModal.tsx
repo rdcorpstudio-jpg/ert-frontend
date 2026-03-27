@@ -566,6 +566,7 @@ export default function OrderDetailModal({
     overflowY: "auto",
     padding: 24,
     boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+    cursor: "default",
   };
 
   const sectionTitle: React.CSSProperties = {
