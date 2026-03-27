@@ -133,7 +133,7 @@ export default function OrderDetailModal({
   const [activeTab, setActiveTab] = useState<TabId>("overview");
   const userRole = getUserRole();
   const isManager = userRole === "manager";
-  const canReplaceInvoiceSubmit = userRole === "account" || userRole === "manager";
+  const canReplaceInvoiceSubmit = userRole === "manager";
   const tabList: TabId[] = isManager
     ? ["overview", "customer", "order", "payment", "shipping", "manager"]
     : ["overview", "customer", "order", "payment", "shipping"];
