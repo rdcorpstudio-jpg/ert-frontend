@@ -50,6 +50,12 @@ type SeriesKey =
 
 type RevenueByProductItem = { name: string; revenue: number };
 
+type ShippingPaymentBucketRow = {
+  key: string;
+  label: string;
+  revenue: number;
+};
+
 function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
@@ -87,6 +93,8 @@ export default function DashboardPage() {
   const [revenueBySale, setRevenueBySale] = useState<RevenueByProductItem[]>([]);
   const [revenueByPaymentMethod, setRevenueByPaymentMethod] = useState<RevenueByProductItem[]>([]);
   const [revenueByPageName, setRevenueByPageName] = useState<RevenueByProductItem[]>([]);
+  const [revenueShippingPaymentBuckets, setRevenueShippingPaymentBuckets] = useState<ShippingPaymentBucketRow[]>([]);
+  const [revenueShippingPaymentOther, setRevenueShippingPaymentOther] = useState(0);
   const [pieChartMode, setPieChartMode] = useState<"category" | "product_name">("category");
   const [productCategories, setProductCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -124,6 +132,10 @@ export default function DashboardPage() {
       params,
     });
     const reqByPageName = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-page-name", { params });
+    const reqShippingPayment = api.get<{
+      items: ShippingPaymentBucketRow[];
+      other_revenue?: number;
+    }>("/orders/revenue-by-shipping-payment-buckets", { params });
     Promise.all([
       reqSummary,
       reqSeries,
@@ -132,8 +144,9 @@ export default function DashboardPage() {
       reqBySale,
       reqByPaymentMethod,
       reqByPageName,
+      reqShippingPayment,
     ])
-      .then(([resS, resD, resCat, resProd, resSale, resPay, resPage]) => {
+      .then(([resS, resD, resCat, resProd, resSale, resPay, resPage, resSP]) => {
         setSummary(resS.data);
         setSeries(Array.isArray(resD.data?.series) ? resD.data.series : []);
         setRevenueByCategory(Array.isArray(resCat.data?.items) ? resCat.data.items : []);
@@ -141,6 +154,10 @@ export default function DashboardPage() {
         setRevenueBySale(Array.isArray(resSale.data?.items) ? resSale.data.items : []);
         setRevenueByPaymentMethod(Array.isArray(resPay.data?.items) ? resPay.data.items : []);
         setRevenueByPageName(Array.isArray(resPage.data?.items) ? resPage.data.items : []);
+        setRevenueShippingPaymentBuckets(Array.isArray(resSP.data?.items) ? resSP.data.items : []);
+        setRevenueShippingPaymentOther(
+          typeof resSP.data?.other_revenue === "number" ? resSP.data.other_revenue : 0
+        );
         setAppliedFrom(from ?? "");
         setAppliedTo(to ?? "");
       })
@@ -148,6 +165,8 @@ export default function DashboardPage() {
         setError("Failed to load revenue data.");
         setRevenueByPaymentMethod([]);
         setRevenueByPageName([]);
+        setRevenueShippingPaymentBuckets([]);
+        setRevenueShippingPaymentOther(0);
       })
       .finally(() => setLoading(false));
   };
@@ -818,54 +837,116 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Revenue by page name (sorted by revenue) */}
+        {/* Revenue by page name + shipping/payment buckets */}
         <div
           style={{
             marginTop: 24,
-            width: "100%",
-            maxWidth: 520,
-            background: "#252525",
-            border: "1px solid #333",
-            borderRadius: 12,
-            padding: 16,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 24,
+            alignItems: "flex-start",
           }}
         >
-          <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 12 }}>
-            Revenue by page name
+          <div
+            style={{
+              flex: "1 1 320px",
+              maxWidth: 520,
+              minWidth: 280,
+              background: "#252525",
+              border: "1px solid #333",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 12 }}>
+              Revenue by page name
+            </div>
+            {revenueByPageName.length === 0 ? (
+              <p style={{ color: "#666", margin: 0 }}>No revenue in range</p>
+            ) : (
+              <ul
+                style={{
+                  listStyle: "none",
+                  padding: 0,
+                  margin: 0,
+                  maxHeight: 360,
+                  overflowY: "auto",
+                }}
+              >
+                {revenueByPageName.map((row) => (
+                  <li
+                    key={row.name}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 0",
+                      borderBottom: "1px solid #333",
+                      fontSize: 14,
+                    }}
+                  >
+                    <span style={{ color: "#e5e5e5" }}>{row.name}</span>
+                    <span style={{ color: "#fff", fontWeight: 600, whiteSpace: "nowrap" }}>
+                      {formatBath(row.revenue)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-          {revenueByPageName.length === 0 ? (
-            <p style={{ color: "#666", margin: 0 }}>No revenue in range</p>
-          ) : (
+
+          <div
+            style={{
+              flex: "1 1 360px",
+              maxWidth: 560,
+              minWidth: 280,
+              background: "#252525",
+              border: "1px solid #333",
+              borderRadius: 12,
+              padding: 16,
+            }}
+          >
+            <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 12 }}>
+              Revenue by order &amp; payment (shipping view)
+            </div>
             <ul
               style={{
                 listStyle: "none",
                 padding: 0,
                 margin: 0,
-                maxHeight: 360,
-                overflowY: "auto",
               }}
             >
-              {revenueByPageName.map((row) => (
+              {revenueShippingPaymentBuckets.map((row, idx) => (
                 <li
-                  key={row.name}
+                  key={row.key}
                   style={{
                     display: "flex",
                     justifyContent: "space-between",
-                    alignItems: "center",
+                    alignItems: "flex-start",
                     gap: 12,
                     padding: "10px 0",
                     borderBottom: "1px solid #333",
                     fontSize: 14,
                   }}
                 >
-                  <span style={{ color: "#e5e5e5" }}>{row.name}</span>
+                  <span style={{ color: "#e5e5e5" }}>
+                    <span style={{ color: "#6b7280", marginRight: 8 }}>{idx + 1}.</span>
+                    {row.label}
+                  </span>
                   <span style={{ color: "#fff", fontWeight: 600, whiteSpace: "nowrap" }}>
                     {formatBath(row.revenue)}
                   </span>
                 </li>
               ))}
             </ul>
-          )}
+            {revenueShippingPaymentOther > 0.01 && (
+              <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 12, marginBottom: 0 }}>
+                Other orders (not in the rows above, e.g. other statuses or COD with other payment
+                statuses): {formatBath(revenueShippingPaymentOther)}
+              </p>
+            )}
+          </div>
         </div>
         </>
       ) : null}
