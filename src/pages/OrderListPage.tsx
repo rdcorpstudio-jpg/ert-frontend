@@ -46,7 +46,7 @@ export default function OrderListPage() {
   const [debouncedKeyword, setDebouncedKeyword] = useState("");
   const [orderStatus, setOrderStatus] = useState("");
   const [paymentStatus, setPaymentStatus] = useState("");
-  const [hasAlert, setHasAlert] = useState(false);
+  const [noShippingDateOnly, setNoShippingDateOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [shippingDate, setShippingDate] = useState(""); // YYYY-MM-DD for filter
 
@@ -86,7 +86,7 @@ export default function OrderListPage() {
       keyword: debouncedKeyword || undefined,
       order_status: orderStatus || undefined,
       payment_status: paymentStatus || undefined,
-      has_alert: hasAlert || undefined,
+      missing_shipping_date: noShippingDateOnly || undefined,
       sort_by: sortBy,
       shipping_date: shippingDate || undefined,
     };
@@ -109,7 +109,7 @@ export default function OrderListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedKeyword, orderStatus, paymentStatus, sortBy, hasAlert, shippingDate]);
+  }, [page, debouncedKeyword, orderStatus, paymentStatus, sortBy, noShippingDateOnly, shippingDate]);
 
   useEffect(() => {
     void loadOrders();
@@ -134,7 +134,7 @@ export default function OrderListPage() {
     prevDebouncedRef.current = "";
     setOrderStatus("");
     setPaymentStatus("");
-    setHasAlert(false);
+    setNoShippingDateOnly(false);
     setShippingDate("");
     setSortBy("newest");
     setPage(1);
@@ -466,13 +466,13 @@ export default function OrderListPage() {
         <label style={{ display: "flex", alignItems: "center", gap: 6, color: "#ccc", fontSize: 14, cursor: "pointer" }}>
           <input
             type="checkbox"
-            checked={hasAlert}
+            checked={noShippingDateOnly}
             onChange={(e) => {
-              setHasAlert(e.target.checked);
+              setNoShippingDateOnly(e.target.checked);
               setPage(1);
             }}
           />
-          Has alert
+          No shipping date
         </label>
         <button type="submit" style={btnPrimaryStyle}>
           Search
