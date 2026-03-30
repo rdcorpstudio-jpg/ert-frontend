@@ -86,17 +86,31 @@ export default function DashboardPage() {
   const [revenueByProduct, setRevenueByProduct] = useState<RevenueByProductItem[]>([]);
   const [revenueBySale, setRevenueBySale] = useState<RevenueByProductItem[]>([]);
   const [revenueByPaymentMethod, setRevenueByPaymentMethod] = useState<RevenueByProductItem[]>([]);
+  const [revenueByPageName, setRevenueByPageName] = useState<RevenueByProductItem[]>([]);
   const [pieChartMode, setPieChartMode] = useState<"category" | "product_name">("category");
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   const role = getUserRole();
   const canAccess = role === "manager" || role === "account";
 
-  const fetchData = (from?: string, to?: string) => {
-    setLoading(true);
-    setError(null);
-    const params: Record<string, string> = {};
+  const buildRevenueParams = (
+    from?: string,
+    to?: string,
+    categoryOverride?: string
+  ): Record<string, string | string[]> => {
+    const params: Record<string, string | string[]> = {};
     if (from?.trim()) params.created_from = from.trim();
     if (to?.trim()) params.created_to = to.trim();
+    const cat = (categoryOverride !== undefined ? categoryOverride : selectedCategory).trim();
+    if (cat) params.product_category = [cat];
+    return params;
+  };
+
+  const fetchData = (from?: string, to?: string, categoryOverride?: string) => {
+    setLoading(true);
+    setError(null);
+    const params = buildRevenueParams(from, to, categoryOverride);
     const reqSummary = api.get<RevenueSummary>("/orders/revenue-summary", { params });
     const reqSeries = api.get<{ series: RevenueByDateItem[] }>("/orders/revenue-by-date", { params });
     const reqByCategory = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-product", {
@@ -109,20 +123,31 @@ export default function DashboardPage() {
     const reqByPaymentMethod = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-payment-method", {
       params,
     });
-    Promise.all([reqSummary, reqSeries, reqByCategory, reqByProduct, reqBySale, reqByPaymentMethod])
-      .then(([resS, resD, resCat, resProd, resSale, resPay]) => {
+    const reqByPageName = api.get<{ items: RevenueByProductItem[] }>("/orders/revenue-by-page-name", { params });
+    Promise.all([
+      reqSummary,
+      reqSeries,
+      reqByCategory,
+      reqByProduct,
+      reqBySale,
+      reqByPaymentMethod,
+      reqByPageName,
+    ])
+      .then(([resS, resD, resCat, resProd, resSale, resPay, resPage]) => {
         setSummary(resS.data);
         setSeries(Array.isArray(resD.data?.series) ? resD.data.series : []);
         setRevenueByCategory(Array.isArray(resCat.data?.items) ? resCat.data.items : []);
         setRevenueByProduct(Array.isArray(resProd.data?.items) ? resProd.data.items : []);
         setRevenueBySale(Array.isArray(resSale.data?.items) ? resSale.data.items : []);
         setRevenueByPaymentMethod(Array.isArray(resPay.data?.items) ? resPay.data.items : []);
+        setRevenueByPageName(Array.isArray(resPage.data?.items) ? resPage.data.items : []);
         setAppliedFrom(from ?? "");
         setAppliedTo(to ?? "");
       })
       .catch(() => {
         setError("Failed to load revenue data.");
         setRevenueByPaymentMethod([]);
+        setRevenueByPageName([]);
       })
       .finally(() => setLoading(false));
   };
@@ -130,6 +155,22 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!canAccess) return;
     fetchData();
+  }, [canAccess]);
+
+  useEffect(() => {
+    if (!canAccess) return;
+    api
+      .get<Array<{ category?: string | null }>>("/products")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const cats = [
+          ...new Set(
+            list.map((p) => (p.category ?? "").trim()).filter((c): c is string => Boolean(c))
+          ),
+        ].sort((a, b) => a.localeCompare(b));
+        setProductCategories(cats);
+      })
+      .catch(() => setProductCategories([]));
   }, [canAccess]);
 
   const handleApplyRange = () => {
@@ -402,6 +443,31 @@ export default function DashboardPage() {
         >
           30 days
         </button>
+        <span style={{ color: "#aaa", fontSize: 14 }}>Product category:</span>
+        <select
+          value={selectedCategory}
+          onChange={(e) => {
+            const v = e.target.value;
+            setSelectedCategory(v);
+            fetchData(dateFrom || undefined, dateTo || undefined, v);
+          }}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 6,
+            border: "1px solid #555",
+            background: "#252525",
+            color: "#eee",
+            fontSize: 14,
+            minWidth: 160,
+          }}
+        >
+          <option value="">All categories</option>
+          {productCategories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
         {(appliedFrom || appliedTo) && (
           <span style={{ fontSize: 13, color: "#9ca3af" }}>
             {appliedFrom || "…"} – {appliedTo || "…"}
@@ -750,6 +816,56 @@ export default function DashboardPage() {
               );
             })()}
           </div>
+        </div>
+
+        {/* Revenue by page name (sorted by revenue) */}
+        <div
+          style={{
+            marginTop: 24,
+            width: "100%",
+            maxWidth: 520,
+            background: "#252525",
+            border: "1px solid #333",
+            borderRadius: 12,
+            padding: 16,
+          }}
+        >
+          <div style={{ fontSize: 14, color: "#9ca3af", marginBottom: 12 }}>
+            Revenue by page name
+          </div>
+          {revenueByPageName.length === 0 ? (
+            <p style={{ color: "#666", margin: 0 }}>No revenue in range</p>
+          ) : (
+            <ul
+              style={{
+                listStyle: "none",
+                padding: 0,
+                margin: 0,
+                maxHeight: 360,
+                overflowY: "auto",
+              }}
+            >
+              {revenueByPageName.map((row) => (
+                <li
+                  key={row.name}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 0",
+                    borderBottom: "1px solid #333",
+                    fontSize: 14,
+                  }}
+                >
+                  <span style={{ color: "#e5e5e5" }}>{row.name}</span>
+                  <span style={{ color: "#fff", fontWeight: 600, whiteSpace: "nowrap" }}>
+                    {formatBath(row.revenue)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
         </>
       ) : null}
