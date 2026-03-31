@@ -134,9 +134,6 @@ export default function OrderDetailModal({
   const [slipUploading, setSlipUploading] = useState(false);
   const [invoiceSubmitUploading, setInvoiceSubmitUploading] = useState(false);
   const [deletingInvoiceSubmitFileId, setDeletingInvoiceSubmitFileId] = useState<number | null>(null);
-  const [availableFreebies, setAvailableFreebies] = useState<Array<{ id: number; name: string }>>([]);
-  const [addingOrderFreebieId, setAddingOrderFreebieId] = useState<number | "">("");
-  const [addingItemFreebieId, setAddingItemFreebieId] = useState<number | "">("");
   const slipFileInputRef = useRef<HTMLInputElement>(null);
   const invoiceSubmitFileInputRef = useRef<HTMLInputElement>(null);
   type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
@@ -226,20 +223,8 @@ export default function OrderDetailModal({
   useEffect(() => {
     if (productEditable) {
       api.get("/products").then((res) => setProducts(res.data ?? [])).catch(() => setProducts([]));
-      api
-        .get<Array<{ id: number; name: string }>>("/products/freebies")
-        .then((res) => {
-          const list = Array.isArray(res.data) ? res.data : [];
-          setAvailableFreebies(
-            list
-              .map((f) => ({ id: f.id, name: f.name }))
-              .filter((f) => f.id != null && String(f.name ?? "").trim() !== "")
-          );
-        })
-        .catch(() => setAvailableFreebies([]));
     } else {
       setProducts([]);
-      setAvailableFreebies([]);
     }
   }, [productEditable]);
 
@@ -487,38 +472,6 @@ export default function OrderDetailModal({
       alert("Failed to delete invoice file.");
     } finally {
       setDeletingInvoiceSubmitFileId(null);
-    }
-  };
-
-  const handleAddOrderFreebie = async () => {
-    if (!detail?.order?.id) return;
-    if (!addingOrderFreebieId) return;
-    try {
-      await api.post(`/orders/${detail.order.id}/freebies`, null, {
-        params: { freebie_id: addingOrderFreebieId },
-      });
-      setAddingOrderFreebieId("");
-      await onReload();
-    } catch {
-      alert("Failed to add freebie to order.");
-    }
-  };
-
-  const handleAddItemFreebie = async () => {
-    if (!detail?.order?.id) return;
-    if (!addingItemFreebieId) return;
-    const mainItem = items[0];
-    if (!mainItem?.id) return;
-    const freebie = availableFreebies.find((f) => f.id === addingItemFreebieId);
-    if (!freebie) return;
-    try {
-      await api.post(`/orders/items/${mainItem.id}/freebies`, null, {
-        params: { freebie_name: freebie.name },
-      });
-      setAddingItemFreebieId("");
-      await onReload();
-    } catch {
-      alert("Failed to add freebie to main product.");
     }
   };
 
@@ -1218,70 +1171,14 @@ export default function OrderDetailModal({
             const fromOrder = orderFreebies.map((f) => (
               <div key={`of-${f.id}`}>🎁 {f.freebie_name ?? `Freebie #${f.id}`}</div>
             ));
-            const fromItems = items.flatMap((item) =>
-              (item.freebies ?? []).map((f) => (
-                <div key={`item-${f.id}`}>🎁 {(f as { freebie_name?: string | null }).freebie_name ?? `Freebie #${f.id}`}</div>
-              ))
-            );
+            const fromItems = items.flatMap((item) => (item.freebies ?? []).map((f) => (
+              <div key={`item-${f.id}`}>🎁 {(f as { freebie_name?: string | null }).freebie_name ?? `Freebie #${f.id}`}</div>
+            )));
             const all = [...fromOrder, ...fromItems];
             if (all.length === 0) return "—";
             return all;
           })()}
         </div>
-        {productEditable && availableFreebies.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <div style={{ ...label, marginTop: 4 }}>Add freebie to order</div>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-              <select
-                value={addingOrderFreebieId}
-                onChange={(e) => setAddingOrderFreebieId(Number(e.target.value) || "")}
-                style={{ ...inputStyle, maxWidth: 260 }}
-              >
-                <option value="">-- เลือกของแถม --</option>
-                {availableFreebies.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={handleAddOrderFreebie}
-                disabled={!addingOrderFreebieId}
-                style={{ ...saveBtn, opacity: addingOrderFreebieId ? 1 : 0.6 }}
-              >
-                Add to order
-              </button>
-            </div>
-            {items.length > 0 && (
-              <>
-                <div style={{ ...label, marginTop: 8 }}>Add freebie to main product</div>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <select
-                    value={addingItemFreebieId}
-                    onChange={(e) => setAddingItemFreebieId(Number(e.target.value) || "")}
-                    style={{ ...inputStyle, maxWidth: 260 }}
-                  >
-                    <option value="">-- เลือกของแถม --</option>
-                    {availableFreebies.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.name}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={handleAddItemFreebie}
-                    disabled={!addingItemFreebieId}
-                    style={{ ...saveBtn, opacity: addingItemFreebieId ? 1 : 0.6 }}
-                  >
-                    Add to main product
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
         <div style={label}>Freebie note</div>
         {canEditFreebieNote ? (
           <>
