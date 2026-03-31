@@ -134,6 +134,9 @@ export default function OrderDetailModal({
   const [slipUploading, setSlipUploading] = useState(false);
   const [invoiceSubmitUploading, setInvoiceSubmitUploading] = useState(false);
   const [deletingInvoiceSubmitFileId, setDeletingInvoiceSubmitFileId] = useState<number | null>(null);
+  const [freebieOptions, setFreebieOptions] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedOrderFreebieId, setSelectedOrderFreebieId] = useState<number | "">("");
+  const [savingOrderFreebie, setSavingOrderFreebie] = useState(false);
   const slipFileInputRef = useRef<HTMLInputElement>(null);
   const invoiceSubmitFileInputRef = useRef<HTMLInputElement>(null);
   type TabId = "overview" | "customer" | "order" | "payment" | "shipping" | "manager";
@@ -178,6 +181,7 @@ export default function OrderDetailModal({
   // Freebie note editable when order status is not Shipped or above (Pending, Checked, Packing)
   const canEditFreebieNote =
     !["Shipped", "Success", "Fail", "Return Received"].includes(orderStatus);
+  const canEditFreebieItems = productEditable;
   // Discount % editable only when order status is Pending
   const canEditDiscount = orderStatus === "Pending";
   // Payment method editable only when payment status is Unchecked (use saved value from detail)
@@ -227,6 +231,24 @@ export default function OrderDetailModal({
       setProducts([]);
     }
   }, [productEditable]);
+
+  useEffect(() => {
+    api
+      .get<Array<{ id: number; name: string }>>("/products/freebies")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setFreebieOptions(list.map((f) => ({ id: f.id, name: f.name })).filter((f) => Boolean(f.id)));
+      })
+      .catch(() => setFreebieOptions([]));
+  }, []);
+
+  useEffect(() => {
+    if (orderFreebies.length > 0 && orderFreebies[0].freebie_id) {
+      setSelectedOrderFreebieId(orderFreebies[0].freebie_id);
+    } else {
+      setSelectedOrderFreebieId("");
+    }
+  }, [orderFreebies]);
 
   const handleSavePaymentStatus = async () => {
     if (!detail?.order?.id) return;
@@ -472,6 +494,28 @@ export default function OrderDetailModal({
       alert("Failed to delete invoice file.");
     } finally {
       setDeletingInvoiceSubmitFileId(null);
+    }
+  };
+
+  const handleSaveOrderFreebie = async () => {
+    if (!order?.id) return;
+    setSavingOrderFreebie(true);
+    try {
+      await api.put(`/orders/${order.id}/freebies`, null, {
+        params: { freebie_id: selectedOrderFreebieId || null },
+      });
+      await onReload();
+    } catch (e: unknown) {
+      const msg =
+        e &&
+        typeof e === "object" &&
+        "response" in e &&
+        typeof (e as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+          ? (e as { response: { data: { detail: string } } }).response.data.detail
+          : "Failed to update free gift item.";
+      alert(msg);
+    } finally {
+      setSavingOrderFreebie(false);
     }
   };
 
@@ -1183,6 +1227,32 @@ export default function OrderDetailModal({
             return all;
           })()}
         </div>
+        {canEditFreebieItems && freebieOptions.length > 0 && (
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+              <select
+                value={selectedOrderFreebieId}
+                onChange={(e) => setSelectedOrderFreebieId(Number(e.target.value) || "")}
+                style={{ ...inputStyle, maxWidth: 300, borderColor: "rgba(34, 197, 94, 0.35)" }}
+              >
+                <option value="">-- เลือกของแถม --</option>
+                {freebieOptions.map((f) => (
+                  <option key={f.id} value={f.id}>
+                    {f.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleSaveOrderFreebie}
+                disabled={savingOrderFreebie}
+                style={saveBtn}
+              >
+                {savingOrderFreebie ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        )}
         <div style={label}>Freebie note</div>
         {canEditFreebieNote ? (
           <>
