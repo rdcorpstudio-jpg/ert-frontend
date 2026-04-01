@@ -256,6 +256,7 @@ export default function CreateOrderPage() {
         `ของแถม: ${freebieSummary}${note.trim() ? ` + ${note.trim()}` : ""}`,
         `ส่วนลด: ${discountSummary}`,
         `ช่องทางการชำระเงิน: ${(paymentMethodLabelMap[paymentMethod] ?? paymentMethod ?? "-")}${installmentSummary}`,
+        `วันจัดส่ง: ${shippingDate || "-"}`,
         "",
         "ยืนยันการสร้างออเดอร์?",
       ].join("\n");
