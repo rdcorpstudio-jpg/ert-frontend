@@ -209,7 +209,58 @@ export default function CreateOrderPage() {
         return;
       }
 
-      if (!window.confirm("ยืนยันการสร้างออเดอร์?")) return;
+      const paymentMethodLabelMap: Record<string, string> = {
+        cod: "ปลายทาง (COD)",
+        transfer: "โอน",
+        card_2c2p: "บัตร 2C2P",
+        card_pay: "บัตร PAY",
+      };
+      const selectedItems = items.filter((item) => item.product_id !== 0);
+      const productSummary = selectedItems.length
+        ? selectedItems
+            .map((item) => products.find((p) => p.id === item.product_id)?.name ?? `#${item.product_id}`)
+            .join(", ")
+        : "-";
+      const freebieSummary = selectedFreebies.length
+        ? selectedFreebies
+            .map((id) => freebies.find((f) => f.id === id)?.name ?? `#${id}`)
+            .join(", ")
+        : "-";
+      const discountSummary = selectedItems.length
+        ? selectedItems
+            .map((item) => {
+              const p = products.find((x) => x.id === item.product_id);
+              const price = p?.price ?? 0;
+              const d = Number(item.discount || 0);
+              if (d <= 0) return "0";
+              if (price > 0) {
+                const pct = (d / price) * 100;
+                const rounded = Math.round(pct);
+                if (Math.abs(pct - rounded) < 0.05) return `${rounded}%`;
+              }
+              if (Math.abs(d - 1000) < 0.01) return "1000 บาท";
+              return `${d.toLocaleString("th-TH")} บาท`;
+            })
+            .join(", ")
+        : "-";
+      const installmentSummary =
+        (paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && installmentType === "installment" && installmentMonths
+          ? ` (${installmentMonths} เดือน)`
+          : "";
+
+      const summaryText = [
+        "สรุปการสร้างออเดอร์",
+        `ชื่อลูกค้า: ${customerName || "-"}`,
+        `จากเพจ: ${pageName || "-"}`,
+        `สินค้า: ${productSummary}`,
+        `ของแถม: ${freebieSummary}${note.trim() ? ` + ${note.trim()}` : ""}`,
+        `ส่วนลด: ${discountSummary}`,
+        `ช่องทางการชำระเงิน: ${(paymentMethodLabelMap[paymentMethod] ?? paymentMethod ?? "-")}${installmentSummary}`,
+        "",
+        "ยืนยันการสร้างออเดอร์?",
+      ].join("\n");
+
+      if (!window.confirm(summaryText)) return;
 
       setIsUploading(true);
       setUploadProgress(0);
