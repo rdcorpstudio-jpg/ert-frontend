@@ -154,15 +154,29 @@ export default function AccountantPage() {
     }
   };
 
+  /** Fixed height so all columns align; body scrolls inside. */
+  const CARD_FIXED_HEIGHT = 480;
+
   const columnStyle: React.CSSProperties = {
-    flex: 1,
+    flex: "1 1 220px",
     minWidth: 220,
+    maxWidth: 380,
+    height: CARD_FIXED_HEIGHT,
     background: "#1a1a1a",
     border: "1px solid #333",
     borderRadius: 8,
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
+  };
+
+  const columnScrollStyle: React.CSSProperties = {
+    flex: 1,
+    minHeight: 0,
+    overflowY: "auto",
+    overflowX: "auto",
+    scrollbarWidth: "thin",
+    scrollbarColor: "#4b5563 #141414",
   };
   const tableStyle: React.CSSProperties = {
     width: "100%",
@@ -199,13 +213,13 @@ export default function AccountantPage() {
 
     return (
       <div style={columnStyle}>
-        <div style={headerStyle}>
+        <div style={{ ...headerStyle, flexShrink: 0 }}>
           {label}
           <span style={{ fontSize: 12, fontWeight: 400, color: "#9ca3af", marginLeft: 8 }}>
             ({filteredOrders.length})
           </span>
         </div>
-        <div style={{ overflow: "auto", flex: 1, minHeight: 200 }}>
+        <div className="accountant-column-scroll" style={columnScrollStyle}>
           {loading ? (
             <p style={{ padding: 16, color: "#888" }}>Loading…</p>
           ) : (
@@ -260,6 +274,23 @@ export default function AccountantPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1600, margin: "0 auto" }}>
+      <style>{`
+        .accountant-column-scroll::-webkit-scrollbar {
+          width: 8px;
+          height: 8px;
+        }
+        .accountant-column-scroll::-webkit-scrollbar-track {
+          background: #141414;
+          border-radius: 4px;
+        }
+        .accountant-column-scroll::-webkit-scrollbar-thumb {
+          background: #4b5563;
+          border-radius: 4px;
+        }
+        .accountant-column-scroll::-webkit-scrollbar-thumb:hover {
+          background: #6b7280;
+        }
+      `}</style>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <h1 style={{ margin: 0, fontSize: 22 }}>Accountant — By payment status</h1>
         <div style={{ display: "flex", gap: 10 }}>
