@@ -197,6 +197,8 @@ export default function CreateOrderPage() {
     !paymentMethod;
 
   const handleSubmit = async () => {
+    let orderId: number | undefined;
+
     try {
 
       if (!chatFile || !slipFile) {
@@ -281,7 +283,7 @@ export default function CreateOrderPage() {
         installment_months: installmentMonths || null,
       });
 
-      const orderId = orderRes.data.order_id;
+      orderId = orderRes.data.order_id;
 
       for (const freebieId of selectedFreebies) {
         await api.post(`/orders/${orderId}/freebies`, null, {
@@ -350,7 +352,21 @@ export default function CreateOrderPage() {
     } catch (err) {
       console.error(err);
       setIsUploading(false);
-      alert("เกิดข้อผิดพลาด");
+      if (orderId != null) {
+        try {
+          await api.delete(`/orders/${orderId}/abandon-create`);
+          alert(
+            "อัปโหลดไฟล์ไม่สำเร็จ ระบบได้ยกเลิกออเดอร์นี้แล้ว กรุณาลองสร้างออเดอร์ใหม่อีกครั้ง"
+          );
+        } catch (rollbackErr) {
+          console.error(rollbackErr);
+          alert(
+            "อัปโหลดไฟล์ไม่สำเร็จ ออเดอร์อาจถูกสร้างแล้ว กรุณาตรวจสอบในรายการออเดอร์ หรือแจ้งผู้จัดการ"
+          );
+        }
+      } else {
+        alert("เกิดข้อผิดพลาด");
+      }
     }
   };
 
