@@ -24,6 +24,8 @@ export type OrderDetail = {
     paid_note: string | null;
     installment_type?: string | null;
     installment_months?: number | null;
+    deposit_amount?: number | null;
+    cod_expected_amount?: number | null;
     [key: string]: unknown;
   } | null;
   items: Array<{
@@ -108,6 +110,7 @@ export default function OrderDetailModal({
   const [shippingAddress, setShippingAddress] = useState("");
   const [shippingNote, setShippingNote] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [depositAmountInput, setDepositAmountInput] = useState("");
   const [installmentType, setInstallmentType] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
   const [paymentStatus, setPaymentStatus] = useState<string>("");
@@ -208,6 +211,8 @@ export default function OrderDetailModal({
   useEffect(() => {
     if (payment) {
       setPaymentMethod(payment.payment_method ?? "");
+      const dep = (payment as { deposit_amount?: number | null }).deposit_amount;
+      setDepositAmountInput(dep != null && dep !== undefined ? String(dep) : "");
       setInstallmentType((payment as { installment_type?: string | null }).installment_type ?? "");
       setInstallmentMonths(
         (payment as { installment_months?: number | null }).installment_months != null
@@ -398,6 +403,17 @@ export default function OrderDetailModal({
 
   const handleSavePaymentMethod = async () => {
     if (!detail?.order?.id) return;
+    const depNum = parseFloat(String(depositAmountInput).replace(/,/g, "").trim());
+    if (paymentMethod === "deposit_cod") {
+      if (Number.isNaN(depNum) || depNum <= 0) {
+        alert("กรุณากรอกยอดมัดจำ (มากกว่า 0)");
+        return;
+      }
+      if (netTotal > 0 && depNum > netTotal + 1e-6) {
+        alert("ยอดมัดจำต้องไม่เกินยอดรวมออเดอร์");
+        return;
+      }
+    }
     setSavingPaymentMethod(true);
     try {
       await api.put(`/orders/${detail.order.id}/payment-method`, null, {
@@ -407,6 +423,8 @@ export default function OrderDetailModal({
           installment_months: (paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && installmentType === "installment"
             ? (installmentMonths ? Number(installmentMonths) : null)
             : null,
+          deposit_amount:
+            paymentMethod === "deposit_cod" && !Number.isNaN(depNum) && depNum > 0 ? depNum : null,
         },
       });
       await onReload();
@@ -1296,11 +1314,13 @@ export default function OrderDetailModal({
             <select
               value={paymentMethod}
               onChange={(e) => {
-                setPaymentMethod(e.target.value);
-                if (e.target.value !== "card_2c2p" && e.target.value !== "card_pay") {
+                const v = e.target.value;
+                setPaymentMethod(v);
+                if (v !== "card_2c2p" && v !== "card_pay") {
                   setInstallmentType("");
                   setInstallmentMonths("");
                 }
+                if (v !== "deposit_cod") setDepositAmountInput("");
               }}
               style={{
                 ...inputStyle,
@@ -1310,10 +1330,43 @@ export default function OrderDetailModal({
             >
               <option value="">-- เลือก --</option>
               <option value="cod">⭐ปลายทาง</option>
+              <option value="deposit_cod">💵มัดจำ + ปลายทาง (Deposit + COD)</option>
               <option value="transfer">💎โอน</option>
               <option value="card_2c2p">💳บัตร 2C2P</option>
               <option value="card_pay">💳บัตร PAY</option>
             </select>
+            {paymentMethod === "deposit_cod" && (
+              <>
+                <div style={{ ...label, marginTop: 12 }}>ยอดมัดจำ (บาท)</div>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.01}
+                  value={depositAmountInput}
+                  onChange={(e) => setDepositAmountInput(e.target.value)}
+                  placeholder="เช่น 5000"
+                  style={{
+                    ...inputStyle,
+                    maxWidth: "100%",
+                    borderColor: "rgba(34, 197, 94, 0.35)",
+                  }}
+                />
+                {netTotal > 0 && (
+                  <p style={{ margin: "8px 0 0", fontSize: 13, color: "#9ca3af" }}>
+                    ยอดรวมออเดอร์: ฿{netTotal.toLocaleString("th-TH")}
+                    {" · "}
+                    เก็บปลายทาง: ฿
+                    {Math.max(
+                      0,
+                      netTotal -
+                        (Number.isNaN(parseFloat(String(depositAmountInput).replace(/,/g, "")))
+                          ? 0
+                          : parseFloat(String(depositAmountInput).replace(/,/g, "")))
+                    ).toLocaleString("th-TH")}
+                  </p>
+                )}
+              </>
+            )}
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
               <>
                 <div style={{ ...label, marginTop: 12 }}>ประเภทการชำระ</div>
@@ -1360,11 +1413,25 @@ export default function OrderDetailModal({
         ) : (
           <div style={value}>
             {paymentMethod === "cod" && "⭐ปลายทาง"}
+            {paymentMethod === "deposit_cod" && "💵มัดจำ + ปลายทาง (Deposit + COD)"}
             {paymentMethod === "transfer" && "💎โอน"}
             {paymentMethod === "card_2c2p" && "💳บัตร 2C2P"}
             {paymentMethod === "card_pay" && "💳บัตร PAY"}
-            {!["cod", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
+            {!["cod", "deposit_cod", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
             {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
+            {paymentMethod === "deposit_cod" && payment && (
+              <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5 }}>
+                มัดจำ: ฿
+                {payment.deposit_amount != null && payment.deposit_amount !== undefined
+                  ? Number(payment.deposit_amount).toLocaleString("th-TH")
+                  : "—"}
+                <br />
+                เก็บปลายทาง: ฿
+                {payment.cod_expected_amount != null && payment.cod_expected_amount !== undefined
+                  ? Number(payment.cod_expected_amount).toLocaleString("th-TH")
+                  : "—"}
+              </div>
+            )}
           </div>
         )}
         <div style={{ marginTop: 12, marginBottom: 4 }}>

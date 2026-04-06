@@ -371,6 +371,7 @@ export default function PackingPage() {
           {[
             { value: "all", label: "All" },
             { value: "cod", label: "ปลายทาง (COD)" },
+            { value: "deposit_cod", label: "มัดจำ + ปลายทาง (Deposit + COD)" },
             { value: "transfer", label: "โอน" },
             { value: "card_2c2p", label: "บัตร 2C2P" },
             { value: "card_pay", label: "บัตร PAY" },

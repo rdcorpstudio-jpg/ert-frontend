@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, Navigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -54,6 +54,7 @@ export default function CreateOrderPage() {
   const [pageNameOptions, setPageNameOptions] = useState<string[]>([]);
   const [pageNameMode, setPageNameMode] = useState<"list" | "custom">("list");
   const [paymentMethod, setPaymentMethod] = useState("");
+  const [depositAmount, setDepositAmount] = useState("");
   // Shipping method is always Normal now; no selection UI.
   const [installmentType, setInstallmentType] = useState("");
   const [installmentMonths, setInstallmentMonths] = useState("");
@@ -188,13 +189,31 @@ export default function CreateOrderPage() {
   const hasValidItem = items.some((i) => i.product_id !== 0);
   const hasIncompleteItem = items.some((i) => i.product_id === 0);
 
+  const orderNetTotal = useMemo(() => {
+    return items
+      .filter((i) => i.product_id !== 0)
+      .reduce((sum, item) => {
+        const p = products.find((x) => x.id === item.product_id);
+        const price = p?.price ?? 0;
+        return sum + (price - Number(item.discount || 0));
+      }, 0);
+  }, [items, products]);
+
+  const depositAmountNum = parseFloat(String(depositAmount).replace(/,/g, "").trim());
+  const depositAmountValid =
+    paymentMethod !== "deposit_cod" ||
+    (!Number.isNaN(depositAmountNum) &&
+      depositAmountNum > 0 &&
+      (orderNetTotal <= 0 || depositAmountNum <= orderNetTotal + 1e-6));
+
   const isSubmitDisabled =
     !chatFile ||
     !slipFile ||
     !hasValidItem ||
     hasIncompleteItem ||
     !pageName.trim() ||
-    !paymentMethod;
+    !paymentMethod ||
+    (paymentMethod === "deposit_cod" && !depositAmountValid);
 
   const handleSubmit = async () => {
     let orderId: number | undefined;
@@ -211,8 +230,28 @@ export default function CreateOrderPage() {
         return;
       }
 
+      if (paymentMethod === "deposit_cod") {
+        const dn = parseFloat(String(depositAmount).replace(/,/g, "").trim());
+        if (Number.isNaN(dn) || dn <= 0) {
+          alert("กรุณากรอกยอดมัดจำ (มากกว่า 0)");
+          return;
+        }
+        const net = items
+          .filter((i) => i.product_id !== 0)
+          .reduce((sum, item) => {
+            const p = products.find((x) => x.id === item.product_id);
+            const price = p?.price ?? 0;
+            return sum + (price - Number(item.discount || 0));
+          }, 0);
+        if (net > 0 && dn > net + 1e-6) {
+          alert("ยอดมัดจำต้องไม่เกินยอดรวมออเดอร์");
+          return;
+        }
+      }
+
       const paymentMethodLabelMap: Record<string, string> = {
         cod: "ปลายทาง (COD)",
+        deposit_cod: "มัดจำ + ปลายทาง (Deposit + COD)",
         transfer: "โอน",
         card_2c2p: "บัตร 2C2P",
         card_pay: "บัตร PAY",
@@ -250,6 +289,22 @@ export default function CreateOrderPage() {
           ? ` (${installmentMonths} เดือน)`
           : "";
 
+      const depositSummary =
+        paymentMethod === "deposit_cod"
+          ? (() => {
+              const dn = parseFloat(String(depositAmount).replace(/,/g, "").trim());
+              const net = items
+                .filter((i) => i.product_id !== 0)
+                .reduce((sum, item) => {
+                  const p = products.find((x) => x.id === item.product_id);
+                  const price = p?.price ?? 0;
+                  return sum + (price - Number(item.discount || 0));
+                }, 0);
+              const cod = Math.max(0, net - (Number.isNaN(dn) ? 0 : dn));
+              return `\nมัดจำ: ฿${Number.isNaN(dn) ? "?" : dn.toLocaleString("th-TH")} / เก็บปลายทาง: ฿${cod.toLocaleString("th-TH")}`;
+            })()
+          : "";
+
       const summaryText = [
         "สรุปการสร้างออเดอร์",
         `ชื่อลูกค้า: ${customerName || "-"}`,
@@ -257,7 +312,7 @@ export default function CreateOrderPage() {
         `สินค้า: ${productSummary}`,
         `ของแถม: ${freebieSummary}${note.trim() ? ` + ${note.trim()}` : ""}`,
         `ส่วนลด: ${discountSummary}`,
-        `ช่องทางการชำระเงิน: ${(paymentMethodLabelMap[paymentMethod] ?? paymentMethod ?? "-")}${installmentSummary}`,
+        `ช่องทางการชำระเงิน: ${(paymentMethodLabelMap[paymentMethod] ?? paymentMethod ?? "-")}${installmentSummary}${depositSummary}`,
         `วันจัดส่ง: ${shippingDate || "-"}`,
         "",
         "ยืนยันการสร้างออเดอร์?",
@@ -268,12 +323,18 @@ export default function CreateOrderPage() {
       setIsUploading(true);
       setUploadProgress(0);
 
+      const depositForApi =
+        paymentMethod === "deposit_cod"
+          ? parseFloat(String(depositAmount).replace(/,/g, "").trim())
+          : null;
+
       const orderRes = await api.post("/orders", {
         customer_name: customerName,
         customer_phone: customerPhone,
         shipping_address: addressText,
         shipping_date: shippingDate || null,
         payment_method: paymentMethod || null,
+        deposit_amount: depositForApi != null && !Number.isNaN(depositForApi) ? depositForApi : null,
         shipping_method: "Normal",
         invoice_text: invoiceText || null,
         note: note || null,
@@ -310,6 +371,10 @@ export default function CreateOrderPage() {
           installment_months: (paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && installmentType === "installment" && installmentMonths
             ? Number(installmentMonths)
             : null,
+          deposit_amount:
+            paymentMethod === "deposit_cod" && depositForApi != null && !Number.isNaN(depositForApi)
+              ? depositForApi
+              : null,
         },
       });
 
@@ -724,15 +789,49 @@ export default function CreateOrderPage() {
           <label style={labelStyle}>🔴 ช่องทางการชำระเงิน</label>
           <select
             value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setPaymentMethod(v);
+              if (v !== "deposit_cod") setDepositAmount("");
+            }}
             style={inputStyle}
           >
             <option value="">-- เลือก --</option>
             <option value="cod">⭐ปลายทาง</option>
+            <option value="deposit_cod">💵มัดจำ + ปลายทาง (Deposit + COD)</option>
             <option value="transfer">💎โอน</option>
             <option value="card_2c2p">💳บัตร 2C2P</option>
             <option value="card_pay">💳บัตร PAY</option>
           </select>
+
+          {paymentMethod === "deposit_cod" && (
+            <>
+              <label style={labelStyle}>ยอดมัดจำ (บาท)</label>
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                placeholder="เช่น 5000"
+                style={inputStyle}
+              />
+              {orderNetTotal > 0 && (
+                <p style={{ margin: "8px 0 0", fontSize: 13, color: "#9ca3af" }}>
+                  ยอดรวมออเดอร์ (ประมาณ): ฿{orderNetTotal.toLocaleString("th-TH")}
+                  {" · "}
+                  เก็บปลายทาง (ประมาณ): ฿
+                  {Math.max(
+                    0,
+                    orderNetTotal -
+                      (Number.isNaN(parseFloat(String(depositAmount).replace(/,/g, "")))
+                        ? 0
+                        : parseFloat(String(depositAmount).replace(/,/g, "")))
+                  ).toLocaleString("th-TH")}
+                </p>
+              )}
+            </>
+          )}
 
           {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
             <>

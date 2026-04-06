@@ -38,7 +38,7 @@ export default function CheckCODPage() {
     setError(null);
     fetchOrdersAllPages<CodRow>({
       payment_status: "Unchecked",
-      payment_method: "cod",
+      payment_method: ["cod", "deposit_cod"],
       sort_by: "oldest",
     })
       .then((list) => {
