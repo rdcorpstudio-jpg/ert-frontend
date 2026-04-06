@@ -159,6 +159,26 @@ export default function OrderDetailModal({
   const orderFreebies = detail?.order_freebies ?? [];
   const netTotal = detail?.net_total ?? 0;
   const productEditable = detail?.product_editable ?? false;
+
+  const overviewDepositCodSuffix =
+    payment?.payment_method === "deposit_cod" &&
+    payment.deposit_amount != null &&
+    payment.deposit_amount !== undefined
+      ? (() => {
+          const dep = Number(payment.deposit_amount);
+          const codRaw =
+            payment.cod_expected_amount != null && payment.cod_expected_amount !== undefined
+              ? Number(payment.cod_expected_amount)
+              : Math.max(0, netTotal - dep);
+          const codStr = Number.isNaN(codRaw) ? "—" : codRaw.toLocaleString("th-TH");
+          return (
+            <span style={{ color: "#a8a8b8", fontWeight: 500 }}>
+              {" "}
+              (มัดจำ {dep.toLocaleString("th-TH")} + ปลายทาง {codStr} บาท)
+            </span>
+          );
+        })()
+      : null;
   // Display name of the User (sale) who created this order — should match that user's name exactly
   const saleName =
     (detail as { sale_name?: string | null })?.sale_name ??
@@ -939,7 +959,10 @@ export default function OrderDetailModal({
               </div>
               <div>
                 <div style={label}>ยอดชำระทั้งหมด</div>
-                <div style={value}>฿{netTotal.toLocaleString()}</div>
+                <div style={value}>
+                  ฿{netTotal.toLocaleString("th-TH")}
+                  {overviewDepositCodSuffix}
+                </div>
               </div>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
