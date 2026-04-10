@@ -55,6 +55,8 @@ export default function OrderListPage() {
   const [shippingDate, setShippingDate] = useState(""); // YYYY-MM-DD for filter
   const [createdFrom, setCreatedFrom] = useState(""); // YYYY-MM-DD — order created_at
   const [createdTo, setCreatedTo] = useState("");
+  const [productCategories, setProductCategories] = useState<string[]>([]);
+  const [selectedProductCategories, setSelectedProductCategories] = useState<string[]>([]);
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 350);
@@ -84,6 +86,23 @@ export default function OrderListPage() {
     }
   };
 
+  useEffect(() => {
+    api
+      .get<Array<{ category?: string | null }>>("/products")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const cats = [
+          ...new Set(
+            list
+              .map((p) => (p.category ?? "").trim())
+              .filter((c): c is string => Boolean(c))
+          ),
+        ].sort((a, b) => a.localeCompare(b));
+        setProductCategories(cats);
+      })
+      .catch(() => setProductCategories([]));
+  }, []);
+
   const loadOrders = useCallback(async () => {
     const role = getUserRole();
     const params: Record<string, string | boolean | number | string[] | undefined> = {
@@ -96,6 +115,7 @@ export default function OrderListPage() {
       shipping_date: shippingDate || undefined,
       created_from: createdFrom || undefined,
       created_to: createdTo || undefined,
+      product_category: selectedProductCategories.length ? [...selectedProductCategories] : undefined,
     };
     if (orderStatus === ORDER_STATUS_SHIPPED_OUT) {
       params.order_status_in = [...SHIPPED_OUT_STATUSES];
@@ -131,6 +151,7 @@ export default function OrderListPage() {
     shippingDate,
     createdFrom,
     createdTo,
+    selectedProductCategories,
   ]);
 
   useEffect(() => {
@@ -160,6 +181,7 @@ export default function OrderListPage() {
     setShippingDate("");
     setCreatedFrom("");
     setCreatedTo("");
+    setSelectedProductCategories([]);
     setSortBy("newest");
     setPage(1);
   };
@@ -523,6 +545,59 @@ export default function OrderListPage() {
           title="วันที่สร้างออเดอร์ — ถึง"
           style={{ ...inputStyle, minWidth: 150 }}
         />
+        <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ color: "#9ca3af", fontSize: 13, whiteSpace: "nowrap" }}>
+            Product Category
+          </span>
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedProductCategories([]);
+              setPage(1);
+            }}
+            style={{
+              ...btnStyle,
+              padding: "5px 10px",
+              fontSize: 12,
+              background: selectedProductCategories.length === 0 ? "#2563eb" : "#333",
+              borderColor: selectedProductCategories.length === 0 ? "#2563eb" : "#555",
+            }}
+          >
+            All
+          </button>
+          {productCategories.map((cat) => {
+            const selected = selectedProductCategories.includes(cat);
+            return (
+              <label
+                key={cat}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "4px 8px",
+                  borderRadius: 6,
+                  border: "1px solid #555",
+                  background: selected ? "#2563eb22" : "#222",
+                  color: "#ddd",
+                  fontSize: 12,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={selected}
+                  onChange={(e) => {
+                    setSelectedProductCategories((prev) =>
+                      e.target.checked ? [...prev, cat] : prev.filter((x) => x !== cat)
+                    );
+                    setPage(1);
+                  }}
+                />
+                {cat}
+              </label>
+            );
+          })}
+        </div>
         <button type="submit" style={btnPrimaryStyle}>
           Search
         </button>
