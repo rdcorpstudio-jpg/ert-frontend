@@ -53,6 +53,9 @@ type Props = {
   onReload: () => void;
 };
 
+const CARD_PAYMENT_METHODS = ["card_2c2p", "card_pay", "deposit_card_2c2p", "deposit_card_pay"] as const;
+const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_card_2c2p", "deposit_card_pay"] as const;
+
 // Allowed next statuses for manual change. Pending→Checked is NOT here: "Checked" is set only when accountant sets payment status to Checked (sync). From Checked onward, pack/manager can step.
 const ORDER_STATUS_FLOW: Record<string, string[]> = {
   Pending: [], // do not allow manual change to Checked; sync from payment status only
@@ -161,7 +164,8 @@ export default function OrderDetailModal({
   const productEditable = detail?.product_editable ?? false;
 
   const overviewDepositCodSuffix =
-    payment?.payment_method === "deposit_cod" &&
+    payment &&
+    DEPOSIT_PAYMENT_METHODS.includes((payment?.payment_method ?? "") as (typeof DEPOSIT_PAYMENT_METHODS)[number]) &&
     payment.deposit_amount != null &&
     payment.deposit_amount !== undefined
       ? (() => {
@@ -174,7 +178,7 @@ export default function OrderDetailModal({
           return (
             <span style={{ color: "#a8a8b8", fontWeight: 500 }}>
               {" "}
-              (มัดจำ {dep.toLocaleString("th-TH")} + ปลายทาง {codStr} บาท)
+              (มัดจำ {dep.toLocaleString("th-TH")} + {payment?.payment_method === "deposit_cod" ? "ปลายทาง" : "บัตร"} {codStr} บาท)
             </span>
           );
         })()
@@ -424,7 +428,7 @@ export default function OrderDetailModal({
   const handleSavePaymentMethod = async () => {
     if (!detail?.order?.id) return;
     const depNum = parseFloat(String(depositAmountInput).replace(/,/g, "").trim());
-    if (paymentMethod === "deposit_cod") {
+    if (DEPOSIT_PAYMENT_METHODS.includes(paymentMethod as (typeof DEPOSIT_PAYMENT_METHODS)[number])) {
       if (Number.isNaN(depNum) || depNum <= 0) {
         alert("กรุณากรอกยอดมัดจำ (มากกว่า 0)");
         return;
@@ -439,12 +443,12 @@ export default function OrderDetailModal({
       await api.put(`/orders/${detail.order.id}/payment-method`, null, {
         params: {
           payment_method: paymentMethod,
-          installment_type: (paymentMethod === "card_2c2p" || paymentMethod === "card_pay") ? (installmentType || null) : null,
-          installment_months: (paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && installmentType === "installment"
+          installment_type: CARD_PAYMENT_METHODS.includes(paymentMethod as (typeof CARD_PAYMENT_METHODS)[number]) ? (installmentType || null) : null,
+          installment_months: CARD_PAYMENT_METHODS.includes(paymentMethod as (typeof CARD_PAYMENT_METHODS)[number]) && installmentType === "installment"
             ? (installmentMonths ? Number(installmentMonths) : null)
             : null,
           deposit_amount:
-            paymentMethod === "deposit_cod" && !Number.isNaN(depNum) && depNum > 0 ? depNum : null,
+            DEPOSIT_PAYMENT_METHODS.includes(paymentMethod as (typeof DEPOSIT_PAYMENT_METHODS)[number]) && !Number.isNaN(depNum) && depNum > 0 ? depNum : null,
         },
       });
       await onReload();
@@ -1339,11 +1343,11 @@ export default function OrderDetailModal({
               onChange={(e) => {
                 const v = e.target.value;
                 setPaymentMethod(v);
-                if (v !== "card_2c2p" && v !== "card_pay") {
+                if (!CARD_PAYMENT_METHODS.includes(v as (typeof CARD_PAYMENT_METHODS)[number])) {
                   setInstallmentType("");
                   setInstallmentMonths("");
                 }
-                if (v !== "deposit_cod") setDepositAmountInput("");
+                if (!DEPOSIT_PAYMENT_METHODS.includes(v as (typeof DEPOSIT_PAYMENT_METHODS)[number])) setDepositAmountInput("");
               }}
               style={{
                 ...inputStyle,
@@ -1354,11 +1358,13 @@ export default function OrderDetailModal({
               <option value="">-- เลือก --</option>
               <option value="cod">⭐ปลายทาง</option>
               <option value="deposit_cod">💵มัดจำ + ปลายทาง (Deposit + COD)</option>
+              <option value="deposit_card_2c2p">💵มัดจำ + 💳บัตร 2C2P</option>
+              <option value="deposit_card_pay">💵มัดจำ + 💳บัตร PAY</option>
               <option value="transfer">💎โอน</option>
               <option value="card_2c2p">💳บัตร 2C2P</option>
               <option value="card_pay">💳บัตร PAY</option>
             </select>
-            {paymentMethod === "deposit_cod" && (
+            {DEPOSIT_PAYMENT_METHODS.includes(paymentMethod as (typeof DEPOSIT_PAYMENT_METHODS)[number]) && (
               <>
                 <div style={{ ...label, marginTop: 12 }}>ยอดมัดจำ (บาท)</div>
                 <input
@@ -1390,7 +1396,7 @@ export default function OrderDetailModal({
                 )}
               </>
             )}
-            {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (
+            {CARD_PAYMENT_METHODS.includes(paymentMethod as (typeof CARD_PAYMENT_METHODS)[number]) && (
               <>
                 <div style={{ ...label, marginTop: 12 }}>ประเภทการชำระ</div>
                 <select
@@ -1437,19 +1443,21 @@ export default function OrderDetailModal({
           <div style={value}>
             {paymentMethod === "cod" && "⭐ปลายทาง"}
             {paymentMethod === "deposit_cod" && "💵มัดจำ + ปลายทาง (Deposit + COD)"}
+            {paymentMethod === "deposit_card_2c2p" && "💵มัดจำ + 💳บัตร 2C2P"}
+            {paymentMethod === "deposit_card_pay" && "💵มัดจำ + 💳บัตร PAY"}
             {paymentMethod === "transfer" && "💎โอน"}
             {paymentMethod === "card_2c2p" && "💳บัตร 2C2P"}
             {paymentMethod === "card_pay" && "💳บัตร PAY"}
-            {!["cod", "deposit_cod", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
-            {(paymentMethod === "card_2c2p" || paymentMethod === "card_pay") && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
-            {paymentMethod === "deposit_cod" && payment && (
+            {!["cod", "deposit_cod", "deposit_card_2c2p", "deposit_card_pay", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
+            {CARD_PAYMENT_METHODS.includes(paymentMethod as (typeof CARD_PAYMENT_METHODS)[number]) && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
+            {DEPOSIT_PAYMENT_METHODS.includes(paymentMethod as (typeof DEPOSIT_PAYMENT_METHODS)[number]) && payment && (
               <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5 }}>
                 มัดจำ: ฿
                 {payment.deposit_amount != null && payment.deposit_amount !== undefined
                   ? Number(payment.deposit_amount).toLocaleString("th-TH")
                   : "—"}
                 <br />
-                เก็บปลายทาง: ฿
+                {paymentMethod === "deposit_cod" ? "เก็บปลายทาง" : "ยอดบัตรคงเหลือ"}: ฿
                 {payment.cod_expected_amount != null && payment.cod_expected_amount !== undefined
                   ? Number(payment.cod_expected_amount).toLocaleString("th-TH")
                   : "—"}
