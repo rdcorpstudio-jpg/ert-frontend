@@ -31,6 +31,10 @@ type SortBy = "newest" | "oldest";
 
 const PAGE_SIZE = 50;
 
+/** List filter: any of these counts as "already sent / outbound" for reporting */
+const ORDER_STATUS_SHIPPED_OUT = "__shipped_special_success__";
+const SHIPPED_OUT_STATUSES = ["Shipped", "Special", "Success"] as const;
+
 export default function OrderListPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -49,6 +53,8 @@ export default function OrderListPage() {
   const [noShippingDateOnly, setNoShippingDateOnly] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("newest");
   const [shippingDate, setShippingDate] = useState(""); // YYYY-MM-DD for filter
+  const [createdFrom, setCreatedFrom] = useState(""); // YYYY-MM-DD — order created_at
+  const [createdTo, setCreatedTo] = useState("");
 
   useEffect(() => {
     const t = window.setTimeout(() => setDebouncedKeyword(keyword.trim()), 350);
@@ -80,16 +86,22 @@ export default function OrderListPage() {
 
   const loadOrders = useCallback(async () => {
     const role = getUserRole();
-    const params: Record<string, string | boolean | number | undefined> = {
+    const params: Record<string, string | boolean | number | string[] | undefined> = {
       page,
       page_size: PAGE_SIZE,
       keyword: debouncedKeyword || undefined,
-      order_status: orderStatus || undefined,
       payment_status: paymentStatus || undefined,
       missing_shipping_date: noShippingDateOnly || undefined,
       sort_by: sortBy,
       shipping_date: shippingDate || undefined,
+      created_from: createdFrom || undefined,
+      created_to: createdTo || undefined,
     };
+    if (orderStatus === ORDER_STATUS_SHIPPED_OUT) {
+      params.order_status_in = [...SHIPPED_OUT_STATUSES];
+    } else if (orderStatus) {
+      params.order_status = orderStatus;
+    }
     if (role === "sale") params.only_my = true;
     setLoading(true);
     setError(null);
@@ -109,7 +121,17 @@ export default function OrderListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, debouncedKeyword, orderStatus, paymentStatus, sortBy, noShippingDateOnly, shippingDate]);
+  }, [
+    page,
+    debouncedKeyword,
+    orderStatus,
+    paymentStatus,
+    sortBy,
+    noShippingDateOnly,
+    shippingDate,
+    createdFrom,
+    createdTo,
+  ]);
 
   useEffect(() => {
     void loadOrders();
@@ -136,6 +158,8 @@ export default function OrderListPage() {
     setPaymentStatus("");
     setNoShippingDateOnly(false);
     setShippingDate("");
+    setCreatedFrom("");
+    setCreatedTo("");
     setSortBy("newest");
     setPage(1);
   };
@@ -437,6 +461,9 @@ export default function OrderListPage() {
           <option value="Shipped">Shipped</option>
           <option value="Special">Special</option>
           <option value="Success">Success</option>
+          <option value={ORDER_STATUS_SHIPPED_OUT}>
+            Shipped + Special + Success (ส่งออกแล้ว)
+          </option>
           <option value="Fail">Fail</option>
           <option value="Return Received">Return Received</option>
         </select>
@@ -474,6 +501,28 @@ export default function OrderListPage() {
           />
           No shipping date
         </label>
+        <span style={{ color: "#9ca3af", fontSize: 13, whiteSpace: "nowrap" }}>สร้างออเดอร์</span>
+        <input
+          type="date"
+          value={createdFrom}
+          onChange={(e) => {
+            setCreatedFrom(e.target.value);
+            setPage(1);
+          }}
+          title="วันที่สร้างออเดอร์ — ตั้งแต่"
+          style={{ ...inputStyle, minWidth: 150 }}
+        />
+        <span style={{ color: "#9ca3af", fontSize: 13 }}>–</span>
+        <input
+          type="date"
+          value={createdTo}
+          onChange={(e) => {
+            setCreatedTo(e.target.value);
+            setPage(1);
+          }}
+          title="วันที่สร้างออเดอร์ — ถึง"
+          style={{ ...inputStyle, minWidth: 150 }}
+        />
         <button type="submit" style={btnPrimaryStyle}>
           Search
         </button>
