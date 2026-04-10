@@ -125,6 +125,7 @@ export default function OrderDetailModal({
   const [savingPayment, setSavingPayment] = useState(false);
   const [products, setProducts] = useState<Array<{ id: number; name: string; price: number }>>([]);
   const [newMainProductId, setNewMainProductId] = useState<number | "">("");
+  const [newMainProductDiscountOption, setNewMainProductDiscountOption] = useState<string>("");
   const [addingMainProduct, setAddingMainProduct] = useState(false);
   const [savingItemId, setSavingItemId] = useState<number | null>(null);
   const [savingDiscountItemId, setSavingDiscountItemId] = useState<number | null>(null);
@@ -581,6 +582,7 @@ export default function OrderDetailModal({
       if (matchPct(0.2)) return "20";
     }
     if (d >= 999 && d <= 1001) return "1000";
+    if (d >= 1499 && d <= 1501) return "1500";
     return "";
   };
 
@@ -593,6 +595,7 @@ export default function OrderDetailModal({
     if (option === "15") return u * 0.15;
     if (option === "20") return u * 0.2;
     if (option === "1000") return 1000;
+    if (option === "1500") return 1500;
     return 0;
   };
 
@@ -644,12 +647,19 @@ export default function OrderDetailModal({
       alert("เพิ่มสินค้าหลักได้เฉพาะเมื่อสถานะออเดอร์เป็น Pending");
       return;
     }
+    const selectedProduct = products.find((p) => p.id === pid);
+    if (!selectedProduct) {
+      alert("ไม่พบสินค้า");
+      return;
+    }
+    const discountAmount = discountAmountFromOption(Number(selectedProduct.price), newMainProductDiscountOption);
     setAddingMainProduct(true);
     try {
       await api.post(`/orders/${order.id}/items`, null, {
-        params: { product_id: pid, discount: 0 },
+        params: { product_id: pid, discount: discountAmount },
       });
       setNewMainProductId("");
+      setNewMainProductDiscountOption("");
       await onReload();
     } catch (e: unknown) {
       const msg =
@@ -1205,6 +1215,21 @@ export default function OrderDetailModal({
                     </option>
                   ))}
                 </select>
+                <select
+                  value={newMainProductDiscountOption}
+                  onChange={(e) => setNewMainProductDiscountOption(e.target.value)}
+                  disabled={addingMainProduct}
+                  style={{ ...inputStyle, maxWidth: 180, borderColor: "rgba(34, 197, 94, 0.35)" }}
+                >
+                  <option value="">-- ส่วนลด --</option>
+                  <option value="5">5%</option>
+                  <option value="8">8%</option>
+                  <option value="10">10%</option>
+                  <option value="15">15%</option>
+                  <option value="20">20%</option>
+                  <option value="1000">1000 บาท</option>
+                  <option value="1500">1500 บาท</option>
+                </select>
                 <button
                   type="button"
                   onClick={handleAddMainProduct}
@@ -1298,6 +1323,7 @@ export default function OrderDetailModal({
                         <option value="15">15%</option>
                         <option value="20">20%</option>
                         <option value="1000">1000 บาท</option>
+                        <option value="1500">1500 บาท</option>
                       </select>
                       {savingDiscountItemId === item.id && (
                         <span style={{ marginLeft: 8, fontSize: 12, color: "#22c55e" }}>Updating…</span>
@@ -1310,6 +1336,8 @@ export default function OrderDetailModal({
                     ? (currentDiscount >= 0.01 ? `฿${currentDiscount.toLocaleString()}` : "—")
                     : currentOption === "1000"
                       ? "1000 บาท"
+                      : currentOption === "1500"
+                        ? "1500 บาท"
                       : `${currentOption}%`;
                 return (
                   <div key={item.id} style={{ marginBottom: 4 }}>
