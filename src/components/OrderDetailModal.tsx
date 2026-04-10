@@ -124,6 +124,8 @@ export default function OrderDetailModal({
   const [savingPaymentMethod, setSavingPaymentMethod] = useState(false);
   const [savingPayment, setSavingPayment] = useState(false);
   const [products, setProducts] = useState<Array<{ id: number; name: string; price: number }>>([]);
+  const [newMainProductId, setNewMainProductId] = useState<number | "">("");
+  const [addingMainProduct, setAddingMainProduct] = useState(false);
   const [savingItemId, setSavingItemId] = useState<number | null>(null);
   const [savingDiscountItemId, setSavingDiscountItemId] = useState<number | null>(null);
   const [freebieNote, setFreebieNote] = useState("");
@@ -211,6 +213,7 @@ export default function OrderDetailModal({
   const canEditFreebieItems = productEditable;
   // Discount % editable only when order status is Pending
   const canEditDiscount = orderStatus === "Pending";
+  const canAddMainProduct = orderStatus === "Pending";
   // Payment method editable only when payment status is Unchecked (use saved value from detail)
   const canEditPaymentMethod = (detail?.payment?.payment_status ?? "Unchecked") === "Unchecked";
 
@@ -630,6 +633,35 @@ export default function OrderDetailModal({
       alert(msg);
     } finally {
       setSavingItemId(null);
+    }
+  };
+
+  const handleAddMainProduct = async () => {
+    if (!order?.id) return;
+    const pid = Number(newMainProductId);
+    if (!pid) return;
+    if (!canAddMainProduct) {
+      alert("เพิ่มสินค้าหลักได้เฉพาะเมื่อสถานะออเดอร์เป็น Pending");
+      return;
+    }
+    setAddingMainProduct(true);
+    try {
+      await api.post(`/orders/${order.id}/items`, null, {
+        params: { product_id: pid, discount: 0 },
+      });
+      setNewMainProductId("");
+      await onReload();
+    } catch (e: unknown) {
+      const msg =
+        e &&
+        typeof e === "object" &&
+        "response" in e &&
+        typeof (e as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+          ? (e as { response: { data: { detail: string } } }).response.data.detail
+          : "Failed to add main product.";
+      alert(msg);
+    } finally {
+      setAddingMainProduct(false);
     }
   };
 
@@ -1157,6 +1189,36 @@ export default function OrderDetailModal({
         )}
         <div style={productEditable ? editableBlockWrap : readOnlyBlockWrap}>
           <div style={label}>Main Product(s)</div>
+          {canAddMainProduct && products.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
+                <select
+                  value={newMainProductId}
+                  onChange={(e) => setNewMainProductId(Number(e.target.value) || "")}
+                  disabled={addingMainProduct}
+                  style={{ ...inputStyle, maxWidth: 340, borderColor: "rgba(34, 197, 94, 0.35)" }}
+                >
+                  <option value="">-- เพิ่มสินค้าหลัก --</option>
+                  {products.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name} — ฿{Number(p.price).toLocaleString()}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={handleAddMainProduct}
+                  disabled={addingMainProduct || !newMainProductId}
+                  style={saveBtn}
+                >
+                  {addingMainProduct ? "Adding…" : "Add Product"}
+                </button>
+              </div>
+              <p style={{ margin: "6px 0 0", fontSize: 12, color: "#9ca3af" }}>
+                เพิ่มสินค้าหลักได้เฉพาะสถานะ Pending
+              </p>
+            </div>
+          )}
           <div style={value}>
             {items.length === 0
               ? "—"
