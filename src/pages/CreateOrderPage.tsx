@@ -726,6 +726,7 @@ export default function CreateOrderPage() {
                   if (value === "20")
                     discountAmount = product.price * 0.2;
                   if (value === "1000") discountAmount = 1000;
+                  if (value === "1500") discountAmount = 1500;
 
                   updateItem(i, "discount", discountAmount);
                 }}
@@ -738,6 +739,7 @@ export default function CreateOrderPage() {
                 <option value="15">15%</option>
                 <option value="20">20%</option>
                 <option value="1000">1000 บาท</option>
+                <option value="1500">1500 บาท</option>
               </select>
             </div>
           ))}
