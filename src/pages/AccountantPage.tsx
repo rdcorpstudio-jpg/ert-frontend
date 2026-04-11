@@ -48,6 +48,10 @@ const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: "card_pay", label: "บัตร PAY" },
 ];
 
+/** Export: orders that are Shipped or Success (ส่งออกแล้ว) — not the same as order list “Shipped + Special + Success”. */
+const ORDER_STATUS_SHIPPED_SUCCESS = "__shipped_success__";
+const SHIPPED_SUCCESS_STATUSES = ["Shipped", "Success"] as const;
+
 export default function AccountantPage() {
   const [ordersByStatus, setOrdersByStatus] = useState<Record<string, OrderRow[]>>({
     Unchecked: [],
@@ -75,6 +79,8 @@ export default function AccountantPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportOrderStatus, setExportOrderStatus] = useState("");
   const [exportPaymentStatus, setExportPaymentStatus] = useState("");
+  const [exportProductCategories, setExportProductCategories] = useState<string[]>([]);
+  const [productCategoryOptions, setProductCategoryOptions] = useState<string[]>([]);
 
   const role = getUserRole();
   const canAccess = role === "account" || role === "manager";
@@ -124,6 +130,24 @@ export default function AccountantPage() {
         setSales(opts);
       })
       .catch(() => setSales([]));
+  }, [canAccess]);
+
+  useEffect(() => {
+    if (!canAccess) return;
+    api
+      .get<Array<{ category?: string | null }>>("/products")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        const cats = [
+          ...new Set(
+            list
+              .map((p) => (p.category ?? "").trim())
+              .filter((c): c is string => Boolean(c))
+          ),
+        ].sort((a, b) => a.localeCompare(b));
+        setProductCategoryOptions(cats);
+      })
+      .catch(() => setProductCategoryOptions([]));
   }, [canAccess]);
 
   const openDetail = async (orderId: number) => {
@@ -599,10 +623,76 @@ export default function AccountantPage() {
                   <option value="Packing">Packing</option>
                   <option value="Shipped">Shipped</option>
                   <option value="Success">Success</option>
+                  <option value={ORDER_STATUS_SHIPPED_SUCCESS}>
+                    Shipped + Success (ส่งออกแล้ว)
+                  </option>
                   <option value="Fail">Fail</option>
                   <option value="Return Received">Return Received</option>
                 </select>
               </label>
+
+              <div style={{ fontSize: 13, color: "#e5e7eb" }}>
+                <div style={{ marginBottom: 6 }}>Product category:</div>
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                    gap: 8,
+                    maxHeight: 140,
+                    overflowY: "auto",
+                    padding: "4px 0",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setExportProductCategories([])}
+                    style={{
+                      padding: "5px 10px",
+                      fontSize: 12,
+                      borderRadius: 6,
+                      border: "1px solid",
+                      borderColor: exportProductCategories.length === 0 ? "#2563eb" : "#555",
+                      background: exportProductCategories.length === 0 ? "#1e3a5f" : "#222",
+                      color: "#e5e7eb",
+                      cursor: "pointer",
+                    }}
+                  >
+                    All
+                  </button>
+                  {productCategoryOptions.map((cat) => {
+                    const selected = exportProductCategories.includes(cat);
+                    return (
+                      <label
+                        key={cat}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "4px 8px",
+                          borderRadius: 6,
+                          border: "1px solid #555",
+                          background: selected ? "#2563eb22" : "#111827",
+                          color: "#ddd",
+                          fontSize: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selected}
+                          onChange={(e) => {
+                            setExportProductCategories((prev) =>
+                              e.target.checked ? [...prev, cat] : prev.filter((x) => x !== cat)
+                            );
+                          }}
+                        />
+                        {cat}
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             <div
@@ -639,13 +729,20 @@ export default function AccountantPage() {
                   try {
                     setExportLoading(true);
                     setExportError(null);
-                    const params: Record<string, string> = {};
+                    const params: Record<string, string | string[] | undefined> = {};
                     if (exportFrom.trim()) params.created_from = exportFrom.trim();
                     if (exportTo.trim()) params.created_to = exportTo.trim();
                     if (exportSaleId) params.sale_id = exportSaleId;
                     if (exportPaymentMethod) params.payment_method = exportPaymentMethod;
                     if (exportPaymentStatus) params.payment_status = exportPaymentStatus;
-                    if (exportOrderStatus) params.order_status = exportOrderStatus;
+                    if (exportOrderStatus === ORDER_STATUS_SHIPPED_SUCCESS) {
+                      params.order_status_in = [...SHIPPED_SUCCESS_STATUSES];
+                    } else if (exportOrderStatus) {
+                      params.order_status = exportOrderStatus;
+                    }
+                    if (exportProductCategories.length) {
+                      params.product_category = [...exportProductCategories];
+                    }
 
                     const res = await api.post<ArrayBuffer>(
                       "/orders/export-orders",
