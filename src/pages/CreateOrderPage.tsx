@@ -24,11 +24,40 @@ type Product = {
   price: number;
 };
 
+/** Stored as rule; baht amount is always derived from current product price (fixes wrong net after changing product). */
+type DiscountRule = "" | "5" | "8" | "10" | "15" | "20" | "1000" | "1500";
+
 type OrderItemForm = {
   product_id: number;
-  discount: number;
+  discount_rule: DiscountRule;
   freebies: number[];
 };
+
+function discountBahtFromRule(
+  product: Product | undefined,
+  rule: DiscountRule
+): number {
+  if (!product || !rule) return 0;
+  const price = Number(product.price) || 0;
+  switch (rule) {
+    case "5":
+      return price * 0.05;
+    case "8":
+      return price * 0.08;
+    case "10":
+      return price * 0.1;
+    case "15":
+      return price * 0.15;
+    case "20":
+      return price * 0.2;
+    case "1000":
+      return 1000;
+    case "1500":
+      return 1500;
+    default:
+      return 0;
+  }
+}
 
 const CARD_PAYMENT_METHODS = ["card_2c2p", "card_pay", "deposit_card_2c2p", "deposit_card_pay"] as const;
 const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_card_2c2p", "deposit_card_pay"] as const;
@@ -173,7 +202,7 @@ export default function CreateOrderPage() {
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: 0, discount: 0, freebies:[] }]);
+    setItems([...items, { product_id: 0, discount_rule: "", freebies: [] }]);
   };
 
   const removeItem = (index: number) => {
@@ -198,7 +227,8 @@ export default function CreateOrderPage() {
       .reduce((sum, item) => {
         const p = products.find((x) => x.id === item.product_id);
         const price = p?.price ?? 0;
-        return sum + (price - Number(item.discount || 0));
+        const disc = discountBahtFromRule(p, item.discount_rule);
+        return sum + (price - disc);
       }, 0);
   }, [items, products]);
 
@@ -244,7 +274,8 @@ export default function CreateOrderPage() {
           .reduce((sum, item) => {
             const p = products.find((x) => x.id === item.product_id);
             const price = p?.price ?? 0;
-            return sum + (price - Number(item.discount || 0));
+            const disc = discountBahtFromRule(p, item.discount_rule);
+            return sum + (price - disc);
           }, 0);
         if (net > 0 && dn > net + 1e-6) {
           alert("ยอดมัดจำต้องไม่เกินยอดรวมออเดอร์");
@@ -272,20 +303,20 @@ export default function CreateOrderPage() {
             .map((id) => freebies.find((f) => f.id === id)?.name ?? `#${id}`)
             .join(", ")
         : "-";
+      const discountRuleLabel: Record<string, string> = {
+        "5": "5%",
+        "8": "8%",
+        "10": "10%",
+        "15": "15%",
+        "20": "20%",
+        "1000": "1000 บาท",
+        "1500": "1500 บาท",
+      };
       const discountSummary = selectedItems.length
         ? selectedItems
             .map((item) => {
-              const p = products.find((x) => x.id === item.product_id);
-              const price = p?.price ?? 0;
-              const d = Number(item.discount || 0);
-              if (d <= 0) return "0";
-              if (price > 0) {
-                const pct = (d / price) * 100;
-                const rounded = Math.round(pct);
-                if (Math.abs(pct - rounded) < 0.05) return `${rounded}%`;
-              }
-              if (Math.abs(d - 1000) < 0.01) return "1000 บาท";
-              return `${d.toLocaleString("th-TH")} บาท`;
+              if (!item.discount_rule) return "0";
+              return discountRuleLabel[item.discount_rule] ?? item.discount_rule;
             })
             .join(", ")
         : "-";
@@ -303,7 +334,8 @@ export default function CreateOrderPage() {
                 .reduce((sum, item) => {
                   const p = products.find((x) => x.id === item.product_id);
                   const price = p?.price ?? 0;
-                  return sum + (price - Number(item.discount || 0));
+                  const disc = discountBahtFromRule(p, item.discount_rule);
+                  return sum + (price - disc);
                 }, 0);
               const remain = Math.max(0, net - (Number.isNaN(dn) ? 0 : dn));
               const remainLabel = paymentMethod === "deposit_cod" ? "เก็บปลายทาง" : "ยอดบัตรคงเหลือ";
@@ -360,10 +392,12 @@ export default function CreateOrderPage() {
 
       const validItems = items.filter((item) => item.product_id !== 0);
       for (const item of validItems) {
+        const p = products.find((x) => x.id === item.product_id);
+        const discountBaht = discountBahtFromRule(p, item.discount_rule);
         await api.post(`/orders/${orderId}/items`, null, {
           params: {
             product_id: item.product_id,
-            discount: item.discount,
+            discount: discountBaht,
           },
         });
       }
@@ -699,9 +733,16 @@ export default function CreateOrderPage() {
 
               <select
                 value={item.product_id || ""}
-                onChange={(e) =>
-                  updateItem(i, "product_id", Number(e.target.value) || 0)
-                }
+                onChange={(e) => {
+                  const pid = Number(e.target.value) || 0;
+                  const next = [...items];
+                  next[i] = {
+                    ...next[i],
+                    product_id: pid,
+                    ...(pid === 0 ? { discount_rule: "" as DiscountRule } : {}),
+                  };
+                  setItems(next);
+                }}
                 style={inputStyle}
               >
                 <option value="">-- เลือกสินค้า --</option>
@@ -713,28 +754,12 @@ export default function CreateOrderPage() {
               </select>
 
               <select
+                value={item.discount_rule}
                 onChange={(e) => {
-                  const value = e.target.value;
-                  const product = products.find(
-                    (p) => p.id === item.product_id
-                  );
-                  if (!product) return;
-
-                  let discountAmount = 0;
-                  if (value === "5")
-                    discountAmount = product.price * 0.05;
-                  if (value === "8")
-                    discountAmount = product.price * 0.08;
-                  if (value === "10")
-                    discountAmount = product.price * 0.1;
-                  if (value === "15")
-                    discountAmount = product.price * 0.15;
-                  if (value === "20")
-                    discountAmount = product.price * 0.2;
-                  if (value === "1000") discountAmount = 1000;
-                  if (value === "1500") discountAmount = 1500;
-
-                  updateItem(i, "discount", discountAmount);
+                  const value = e.target.value as DiscountRule;
+                  const product = products.find((p) => p.id === item.product_id);
+                  if (!product && value !== "") return;
+                  updateItem(i, "discount_rule", value);
                 }}
                 style={inputStyle}
               >
