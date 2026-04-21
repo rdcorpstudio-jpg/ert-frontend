@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
 type Freebie = {
   id: number;
   name: string;
+  is_active: boolean;
 };
 
 function getUserRole(): string {
@@ -78,7 +79,18 @@ export default function DevPage() {
 
   const [newFreebieName, setNewFreebieName] = useState("");
   const [freebieSubmitting, setFreebieSubmitting] = useState(false);
+  const [freebieUpdatingId, setFreebieUpdatingId] = useState<number | null>(null);
   const [freebieMessage, setFreebieMessage] = useState("");
+
+  const loadFreebies = useCallback(async () => {
+    try {
+      const res = await api.get<Freebie[]>("/products/freebies", { params: { include_inactive: true } });
+      const list = Array.isArray(res.data) ? res.data : [];
+      setFreebies(list);
+    } catch {
+      setFreebies([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isManager) return;
@@ -87,13 +99,7 @@ export default function DevPage() {
       const cats = [...new Set(list.map((p) => p.category).filter(Boolean) as string[])].sort();
       setCategories(cats);
     }).catch(() => setCategories([]));
-    api
-      .get<Freebie[]>("/products/freebies")
-      .then((res) => {
-        const list = Array.isArray(res.data) ? res.data : [];
-        setFreebies(list.sort((a, b) => a.name.localeCompare(b.name)));
-      })
-      .catch(() => setFreebies([]));
+    loadFreebies();
 
     // Load page names from backend
     api
@@ -114,7 +120,7 @@ export default function DevPage() {
         setPageNames(deduped.sort((a, b) => a.name.localeCompare(b.name)));
       })
       .catch(() => setPageNames([]));
-  }, [isManager]);
+  }, [isManager, loadFreebies]);
 
   const handleAddPageName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,9 +240,7 @@ export default function DevPage() {
       await api.post("/products/freebies", null, { params: { name } });
       setNewFreebieName("");
       setFreebieMessage("Freebie created.");
-      const res = await api.get<Freebie[]>("/products/freebies");
-      const list = Array.isArray(res.data) ? res.data : [];
-      setFreebies(list.sort((a, b) => a.name.localeCompare(b.name)));
+      await loadFreebies();
     } catch (err: unknown) {
       const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
         ? (err as { response: { data: { detail: string } } }).response.data.detail
@@ -244,6 +248,25 @@ export default function DevPage() {
       setFreebieMessage(msg);
     } finally {
       setFreebieSubmitting(false);
+    }
+  };
+
+  const handleToggleFreebieActive = async (freebie: Freebie) => {
+    setFreebieUpdatingId(freebie.id);
+    setFreebieMessage("");
+    try {
+      await api.put(`/products/freebies/${freebie.id}/active`, null, {
+        params: { is_active: !freebie.is_active },
+      });
+      setFreebieMessage(!freebie.is_active ? "Freebie enabled." : "Freebie disabled.");
+      await loadFreebies();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : "Failed to update freebie status.";
+      setFreebieMessage(msg);
+    } finally {
+      setFreebieUpdatingId(null);
     }
   };
 
@@ -400,11 +423,46 @@ export default function DevPage() {
         <button type="submit" disabled={freebieSubmitting} style={buttonStyle}>
           {freebieSubmitting ? "Creating…" : "Create Freebie"}
         </button>
-        {freebieMessage && <p style={{ marginTop: 12, color: freebieMessage.startsWith("Freebie created") ? "#22c55e" : "#f59e0b" }}>{freebieMessage}</p>}
+        {freebieMessage && <p style={{ marginTop: 12, color: freebieMessage.startsWith("Freebie") ? "#22c55e" : "#f59e0b" }}>{freebieMessage}</p>}
         {freebies.length > 0 && (
-          <p style={{ marginTop: 12, fontSize: 13, color: "#9ca3af" }}>
-            Existing freebies: {freebies.map((f) => f.name).join(", ")}
-          </p>
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>Existing freebies:</p>
+            <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+              {freebies.map((f) => (
+                <li
+                  key={f.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 0",
+                    fontSize: 13,
+                    gap: 8,
+                  }}
+                >
+                  <span>
+                    {f.name}{" "}
+                    <span style={{ color: f.is_active ? "#22c55e" : "#f59e0b" }}>
+                      ({f.is_active ? "active" : "inactive"})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFreebieActive(f)}
+                    disabled={freebieUpdatingId === f.id}
+                    style={{
+                      ...buttonStyle,
+                      padding: "6px 10px",
+                      fontSize: 12,
+                      background: f.is_active ? "#b45309" : "#166534",
+                    }}
+                  >
+                    {freebieUpdatingId === f.id ? "Updating…" : f.is_active ? "Disable" : "Enable"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
         )}
       </form>
 

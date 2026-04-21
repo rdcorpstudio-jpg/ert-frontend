@@ -267,7 +267,9 @@ export default function OrderDetailModal({
 
   useEffect(() => {
     api
-      .get<Array<{ id: number; name: string }>>("/products/freebies")
+      .get<Array<{ id: number; name: string }>>("/products/freebies", {
+        params: { include_inactive: true },
+      })
       .then((res) => {
         const list = Array.isArray(res.data) ? res.data : [];
         setFreebieOptions(list.map((f) => ({ id: f.id, name: f.name })).filter((f) => Boolean(f.id)));
