@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api";
 
+type Freebie = {
+  id: number;
+  name: string;
+};
+
 function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
@@ -48,6 +53,7 @@ export default function DevPage() {
   const isManager = role === "manager";
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [freebies, setFreebies] = useState<Freebie[]>([]);
 
   const [productCategory, setProductCategory] = useState("");
   const [productName, setProductName] = useState("");
@@ -70,6 +76,10 @@ export default function DevPage() {
   const [newPageName, setNewPageName] = useState("");
   const [pageNameMessage, setPageNameMessage] = useState("");
 
+  const [newFreebieName, setNewFreebieName] = useState("");
+  const [freebieSubmitting, setFreebieSubmitting] = useState(false);
+  const [freebieMessage, setFreebieMessage] = useState("");
+
   useEffect(() => {
     if (!isManager) return;
     api.get<Array<{ category?: string | null }>>("/products").then((res) => {
@@ -77,6 +87,13 @@ export default function DevPage() {
       const cats = [...new Set(list.map((p) => p.category).filter(Boolean) as string[])].sort();
       setCategories(cats);
     }).catch(() => setCategories([]));
+    api
+      .get<Freebie[]>("/products/freebies")
+      .then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
+        setFreebies(list.sort((a, b) => a.name.localeCompare(b.name)));
+      })
+      .catch(() => setFreebies([]));
 
     // Load page names from backend
     api
@@ -197,6 +214,36 @@ export default function DevPage() {
       setUserMessage(msg);
     } finally {
       setUserSubmitting(false);
+    }
+  };
+
+  const handleCreateFreebie = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newFreebieName.trim();
+    if (!name) {
+      setFreebieMessage("Fill freebie name.");
+      return;
+    }
+    if (freebies.some((f) => f.name.trim().toLowerCase() === name.toLowerCase())) {
+      setFreebieMessage("Freebie already exists.");
+      return;
+    }
+    setFreebieSubmitting(true);
+    setFreebieMessage("");
+    try {
+      await api.post("/products/freebies", null, { params: { name } });
+      setNewFreebieName("");
+      setFreebieMessage("Freebie created.");
+      const res = await api.get<Freebie[]>("/products/freebies");
+      const list = Array.isArray(res.data) ? res.data : [];
+      setFreebies(list.sort((a, b) => a.name.localeCompare(b.name)));
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : "Failed to create freebie.";
+      setFreebieMessage(msg);
+    } finally {
+      setFreebieSubmitting(false);
     }
   };
 
@@ -338,6 +385,27 @@ export default function DevPage() {
           {userSubmitting ? "Creating…" : "Create Account"}
         </button>
         {userMessage && <p style={{ marginTop: 12, color: userMessage.startsWith("Account created") ? "#22c55e" : "#f59e0b" }}>{userMessage}</p>}
+      </form>
+
+      <form onSubmit={handleCreateFreebie} style={sectionStyle}>
+        <h2 style={{ margin: "0 0 16px", fontSize: 18 }}>Create Freebie</h2>
+        <label style={labelStyle}>Freebie name</label>
+        <input
+          type="text"
+          value={newFreebieName}
+          onChange={(e) => setNewFreebieName(e.target.value)}
+          placeholder="เช่น น้ำยาซักผ้า, หมอนรองคอ"
+          style={inputStyle}
+        />
+        <button type="submit" disabled={freebieSubmitting} style={buttonStyle}>
+          {freebieSubmitting ? "Creating…" : "Create Freebie"}
+        </button>
+        {freebieMessage && <p style={{ marginTop: 12, color: freebieMessage.startsWith("Freebie created") ? "#22c55e" : "#f59e0b" }}>{freebieMessage}</p>}
+        {freebies.length > 0 && (
+          <p style={{ marginTop: 12, fontSize: 13, color: "#9ca3af" }}>
+            Existing freebies: {freebies.map((f) => f.name).join(", ")}
+          </p>
+        )}
       </form>
 
       <form onSubmit={handleDeleteOrders} style={{ ...sectionStyle, borderColor: "#555" }}>
