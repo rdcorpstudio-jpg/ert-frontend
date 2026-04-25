@@ -251,19 +251,19 @@ export default function DevPage() {
     }
   };
 
-  const handleToggleFreebieActive = async (freebie: Freebie) => {
+  const handleToggleFreebieVisibility = async (freebie: Freebie) => {
     setFreebieUpdatingId(freebie.id);
     setFreebieMessage("");
     try {
       await api.put(`/products/freebies/${freebie.id}/active`, null, {
         params: { is_active: !freebie.is_active },
       });
-      setFreebieMessage(!freebie.is_active ? "Freebie enabled." : "Freebie disabled.");
+      setFreebieMessage(!freebie.is_active ? "Freebie shown on Create Order." : "Freebie hidden from Create Order.");
       await loadFreebies();
     } catch (err: unknown) {
       const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
         ? (err as { response: { data: { detail: string } } }).response.data.detail
-        : "Failed to update freebie status.";
+        : "Failed to update freebie visibility.";
       setFreebieMessage(msg);
     } finally {
       setFreebieUpdatingId(null);
@@ -426,7 +426,9 @@ export default function DevPage() {
         {freebieMessage && <p style={{ marginTop: 12, color: freebieMessage.startsWith("Freebie") ? "#22c55e" : "#f59e0b" }}>{freebieMessage}</p>}
         {freebies.length > 0 && (
           <div style={{ marginTop: 12 }}>
-            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>Existing freebies:</p>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>
+              Existing freebies (Show = selectable on Create Order, Hide = not selectable):
+            </p>
             <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
               {freebies.map((f) => (
                 <li
@@ -443,12 +445,12 @@ export default function DevPage() {
                   <span>
                     {f.name}{" "}
                     <span style={{ color: f.is_active ? "#22c55e" : "#f59e0b" }}>
-                      ({f.is_active ? "active" : "inactive"})
+                      ({f.is_active ? "show" : "hide"})
                     </span>
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleToggleFreebieActive(f)}
+                    onClick={() => handleToggleFreebieVisibility(f)}
                     disabled={freebieUpdatingId === f.id}
                     style={{
                       ...buttonStyle,
@@ -457,7 +459,7 @@ export default function DevPage() {
                       background: f.is_active ? "#b45309" : "#166534",
                     }}
                   >
-                    {freebieUpdatingId === f.id ? "Updating…" : f.is_active ? "Disable" : "Enable"}
+                    {freebieUpdatingId === f.id ? "Updating…" : f.is_active ? "Hide" : "Show"}
                   </button>
                 </li>
               ))}
