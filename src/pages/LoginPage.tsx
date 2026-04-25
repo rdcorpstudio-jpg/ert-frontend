@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function LoginPage() {
+  const appVersion = __APP_VERSION__;
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -127,6 +128,14 @@ export default function LoginPage() {
     borderRadius: 8,
   };
 
+  const versionStyle: React.CSSProperties = {
+    marginTop: 14,
+    fontSize: 12,
+    color: "#6b7280",
+    textAlign: "center",
+    letterSpacing: "0.02em",
+  };
+
   return (
     <div style={pageStyle}>
       <div style={cardStyle}>
@@ -212,6 +221,7 @@ export default function LoginPage() {
             {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
+        <p style={versionStyle}>Version {appVersion}</p>
       </div>
     </div>
   );
