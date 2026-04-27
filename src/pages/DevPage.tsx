@@ -8,6 +8,14 @@ type Freebie = {
   is_active: boolean;
 };
 
+type Product = {
+  id: number;
+  category: string;
+  name: string;
+  price: number;
+  is_active: boolean;
+};
+
 function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
@@ -54,12 +62,14 @@ export default function DevPage() {
   const isManager = role === "manager";
 
   const [categories, setCategories] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [freebies, setFreebies] = useState<Freebie[]>([]);
 
   const [productCategory, setProductCategory] = useState("");
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productSubmitting, setProductSubmitting] = useState(false);
+  const [productUpdatingId, setProductUpdatingId] = useState<number | null>(null);
   const [productMessage, setProductMessage] = useState("");
 
   const [userEmail, setUserEmail] = useState("");
@@ -82,6 +92,19 @@ export default function DevPage() {
   const [freebieUpdatingId, setFreebieUpdatingId] = useState<number | null>(null);
   const [freebieMessage, setFreebieMessage] = useState("");
 
+  const loadProducts = useCallback(async () => {
+    try {
+      const res = await api.get<Product[]>("/products", { params: { include_inactive: true } });
+      const list = Array.isArray(res.data) ? res.data : [];
+      setProducts(list);
+      const cats = [...new Set(list.map((p) => (p.category ?? "").trim()).filter((c): c is string => Boolean(c)))].sort();
+      setCategories(cats);
+    } catch {
+      setProducts([]);
+      setCategories([]);
+    }
+  }, []);
+
   const loadFreebies = useCallback(async () => {
     try {
       const res = await api.get<Freebie[]>("/products/freebies", { params: { include_inactive: true } });
@@ -94,11 +117,7 @@ export default function DevPage() {
 
   useEffect(() => {
     if (!isManager) return;
-    api.get<Array<{ category?: string | null }>>("/products").then((res) => {
-      const list = Array.isArray(res.data) ? res.data : [];
-      const cats = [...new Set(list.map((p) => p.category).filter(Boolean) as string[])].sort();
-      setCategories(cats);
-    }).catch(() => setCategories([]));
+    loadProducts();
     loadFreebies();
 
     // Load page names from backend
@@ -120,7 +139,7 @@ export default function DevPage() {
         setPageNames(deduped.sort((a, b) => a.name.localeCompare(b.name)));
       })
       .catch(() => setPageNames([]));
-  }, [isManager, loadFreebies]);
+  }, [isManager, loadFreebies, loadProducts]);
 
   const handleAddPageName = (e: React.FormEvent) => {
     e.preventDefault();
@@ -183,7 +202,7 @@ export default function DevPage() {
       setProductMessage("Product created.");
       setProductName("");
       setProductPrice("");
-      setCategories((prev) => (prev.includes(productCategory.trim()) ? prev : [...prev, productCategory.trim()].sort()));
+      await loadProducts();
     } catch (err: unknown) {
       const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
         ? (err as { response: { data: { detail: string } } }).response.data.detail
@@ -191,6 +210,25 @@ export default function DevPage() {
       setProductMessage(msg);
     } finally {
       setProductSubmitting(false);
+    }
+  };
+
+  const handleToggleProductVisibility = async (product: Product) => {
+    setProductUpdatingId(product.id);
+    setProductMessage("");
+    try {
+      await api.put(`/products/${product.id}/active`, null, {
+        params: { is_active: !product.is_active },
+      });
+      setProductMessage(!product.is_active ? "Product shown on Create Order." : "Product hidden from Create Order.");
+      await loadProducts();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : "Failed to update product visibility.";
+      setProductMessage(msg);
+    } finally {
+      setProductUpdatingId(null);
     }
   };
 
@@ -364,7 +402,49 @@ export default function DevPage() {
         <button type="submit" disabled={productSubmitting} style={buttonStyle}>
           {productSubmitting ? "Creating…" : "Create Product"}
         </button>
-        {productMessage && <p style={{ marginTop: 12, color: productMessage.startsWith("Product created") ? "#22c55e" : "#f59e0b" }}>{productMessage}</p>}
+        {productMessage && <p style={{ marginTop: 12, color: productMessage.startsWith("Product ") ? "#22c55e" : "#f59e0b" }}>{productMessage}</p>}
+        {products.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>
+              Existing products (Show = selectable on Create Order, Hide = not selectable):
+            </p>
+            <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0, maxHeight: 220, overflowY: "auto" }}>
+              {products.map((p) => (
+                <li
+                  key={p.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "6px 0",
+                    fontSize: 13,
+                    gap: 8,
+                  }}
+                >
+                  <span>
+                    [{p.category}] {p.name}{" "}
+                    <span style={{ color: p.is_active ? "#22c55e" : "#f59e0b" }}>
+                      ({p.is_active ? "show" : "hide"})
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleProductVisibility(p)}
+                    disabled={productUpdatingId === p.id}
+                    style={{
+                      ...buttonStyle,
+                      padding: "6px 10px",
+                      fontSize: 12,
+                      background: p.is_active ? "#b45309" : "#166534",
+                    }}
+                  >
+                    {productUpdatingId === p.id ? "Updating…" : p.is_active ? "Hide" : "Show"}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </form>
 
       <form onSubmit={handleCreateUser} style={sectionStyle}>
