@@ -16,6 +16,11 @@ type Product = {
   is_active: boolean;
 };
 
+type ProductDisplayOrder = {
+  category_order: string[];
+  product_order: number[];
+};
+
 function getUserRole(): string {
   try {
     const token = localStorage.getItem("token");
@@ -63,6 +68,8 @@ export default function DevPage() {
 
   const [categories, setCategories] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categoryOrderDraft, setCategoryOrderDraft] = useState<string[]>([]);
+  const [productOrderDraft, setProductOrderDraft] = useState<number[]>([]);
   const [freebies, setFreebies] = useState<Freebie[]>([]);
 
   const [productCategory, setProductCategory] = useState("");
@@ -71,6 +78,8 @@ export default function DevPage() {
   const [productSubmitting, setProductSubmitting] = useState(false);
   const [productUpdatingId, setProductUpdatingId] = useState<number | null>(null);
   const [productMessage, setProductMessage] = useState("");
+  const [savingCategoryOrder, setSavingCategoryOrder] = useState(false);
+  const [savingProductOrder, setSavingProductOrder] = useState(false);
 
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
@@ -94,14 +103,26 @@ export default function DevPage() {
 
   const loadProducts = useCallback(async () => {
     try {
-      const res = await api.get<Product[]>("/products", { params: { include_inactive: true } });
-      const list = Array.isArray(res.data) ? res.data : [];
+      const [productsRes, orderRes] = await Promise.all([
+        api.get<Product[]>("/products", { params: { include_inactive: true } }),
+        api.get<ProductDisplayOrder>("/products/display-order"),
+      ]);
+      const list = Array.isArray(productsRes.data) ? productsRes.data : [];
+      const orderData = orderRes.data ?? { category_order: [], product_order: [] };
       setProducts(list);
-      const cats = [...new Set(list.map((p) => (p.category ?? "").trim()).filter((c): c is string => Boolean(c)))].sort();
-      setCategories(cats);
+      setProductOrderDraft(orderData.product_order ?? []);
+      const cats = [...new Set(list.map((p) => (p.category ?? "").trim()).filter((c): c is string => Boolean(c)))];
+      const orderedCats = [
+        ...(orderData.category_order ?? []).filter((c) => cats.includes(c)),
+        ...cats.filter((c) => !(orderData.category_order ?? []).includes(c)),
+      ];
+      setCategories(orderedCats);
+      setCategoryOrderDraft(orderedCats);
     } catch {
       setProducts([]);
       setCategories([]);
+      setCategoryOrderDraft([]);
+      setProductOrderDraft([]);
     }
   }, []);
 
@@ -229,6 +250,63 @@ export default function DevPage() {
       setProductMessage(msg);
     } finally {
       setProductUpdatingId(null);
+    }
+  };
+
+  const moveInArray = <T,>(arr: T[], from: number, to: number): T[] => {
+    if (from < 0 || from >= arr.length || to < 0 || to >= arr.length) return arr;
+    const next = [...arr];
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next;
+  };
+
+  const getOrderedProducts = (): Product[] => {
+    const byId = new Map(products.map((p) => [p.id, p] as const));
+    const orderedByDraft = productOrderDraft.map((id) => byId.get(id)).filter((p): p is Product => Boolean(p));
+    const missing = products.filter((p) => !productOrderDraft.includes(p.id));
+    return [...orderedByDraft, ...missing].sort((a, b) => {
+      const ca = categoryOrderDraft.indexOf((a.category ?? "").trim());
+      const cb = categoryOrderDraft.indexOf((b.category ?? "").trim());
+      const caIdx = ca === -1 ? 999_999 : ca;
+      const cbIdx = cb === -1 ? 999_999 : cb;
+      if (caIdx !== cbIdx) return caIdx - cbIdx;
+      return a.id - b.id;
+    });
+  };
+
+  const handleSaveCategoryOrder = async () => {
+    setSavingCategoryOrder(true);
+    setProductMessage("");
+    try {
+      await api.put("/products/display-order/categories", categoryOrderDraft);
+      setProductMessage("Product category order saved.");
+      await loadProducts();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : "Failed to save product category order.";
+      setProductMessage(msg);
+    } finally {
+      setSavingCategoryOrder(false);
+    }
+  };
+
+  const handleSaveProductOrder = async () => {
+    const orderedIds = getOrderedProducts().map((p) => p.id);
+    setSavingProductOrder(true);
+    setProductMessage("");
+    try {
+      await api.put("/products/display-order/products", orderedIds);
+      setProductMessage("Product order saved.");
+      await loadProducts();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err && typeof (err as { response?: { data?: { detail?: string } } }).response?.data?.detail === "string"
+        ? (err as { response: { data: { detail: string } } }).response.data.detail
+        : "Failed to save product order.";
+      setProductMessage(msg);
+    } finally {
+      setSavingProductOrder(false);
     }
   };
 
@@ -403,13 +481,63 @@ export default function DevPage() {
           {productSubmitting ? "Creating…" : "Create Product"}
         </button>
         {productMessage && <p style={{ marginTop: 12, color: productMessage.startsWith("Product ") ? "#22c55e" : "#f59e0b" }}>{productMessage}</p>}
+        {categoryOrderDraft.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>
+              Product category order (used in Create Order):
+            </p>
+            <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+              {categoryOrderDraft.map((category, idx) => (
+                <li
+                  key={category}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    padding: "4px 0",
+                    fontSize: 13,
+                    gap: 8,
+                  }}
+                >
+                  <span>{category}</span>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryOrderDraft((prev) => moveInArray(prev, idx, idx - 1))}
+                      disabled={idx === 0}
+                      style={{ ...buttonStyle, padding: "4px 8px", fontSize: 12, background: "#334155" }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setCategoryOrderDraft((prev) => moveInArray(prev, idx, idx + 1))}
+                      disabled={idx === categoryOrderDraft.length - 1}
+                      style={{ ...buttonStyle, padding: "4px 8px", fontSize: 12, background: "#334155" }}
+                    >
+                      ↓
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <button
+              type="button"
+              onClick={handleSaveCategoryOrder}
+              disabled={savingCategoryOrder}
+              style={{ ...buttonStyle, marginTop: 8, padding: "6px 10px", fontSize: 12, background: "#4338ca" }}
+            >
+              {savingCategoryOrder ? "Saving…" : "Save Category Order"}
+            </button>
+          </div>
+        )}
         {products.length > 0 && (
           <div style={{ marginTop: 12 }}>
             <p style={{ margin: "0 0 8px", fontSize: 13, color: "#9ca3af" }}>
               Existing products (Show = selectable on Create Order, Hide = not selectable):
             </p>
             <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0, maxHeight: 220, overflowY: "auto" }}>
-              {products.map((p) => (
+              {getOrderedProducts().map((p, idx, arr) => (
                 <li
                   key={p.id}
                   style={{
@@ -440,9 +568,35 @@ export default function DevPage() {
                   >
                     {productUpdatingId === p.id ? "Updating…" : p.is_active ? "Hide" : "Show"}
                   </button>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      type="button"
+                      onClick={() => setProductOrderDraft(moveInArray(arr.map((x) => x.id), idx, idx - 1))}
+                      disabled={idx === 0}
+                      style={{ ...buttonStyle, padding: "4px 8px", fontSize: 12, background: "#334155" }}
+                    >
+                      ↑
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setProductOrderDraft(moveInArray(arr.map((x) => x.id), idx, idx + 1))}
+                      disabled={idx === arr.length - 1}
+                      style={{ ...buttonStyle, padding: "4px 8px", fontSize: 12, background: "#334155" }}
+                    >
+                      ↓
+                    </button>
+                  </div>
                 </li>
               ))}
             </ul>
+            <button
+              type="button"
+              onClick={handleSaveProductOrder}
+              disabled={savingProductOrder}
+              style={{ ...buttonStyle, marginTop: 8, padding: "6px 10px", fontSize: 12, background: "#4338ca" }}
+            >
+              {savingProductOrder ? "Saving…" : "Save Product Order"}
+            </button>
           </div>
         )}
       </form>

@@ -113,7 +113,7 @@ export default function CreateOrderPage() {
             .map((p) => (p.category ?? "").trim())
             .filter(Boolean)
         )
-      ).sort((a, b) => a.localeCompare(b)),
+      ),
     [products]
   );
 
