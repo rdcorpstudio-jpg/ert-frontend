@@ -20,6 +20,7 @@ type ProductFreebie = {
 
 type Product = {
   id: number;
+  category: string;
   name: string;
   price: number;
 };
@@ -28,6 +29,7 @@ type Product = {
 type DiscountRule = "" | "5" | "8" | "10" | "15" | "20" | "1000" | "1500";
 
 type OrderItemForm = {
+  product_category: string;
   product_id: number;
   discount_rule: DiscountRule;
   freebies: number[];
@@ -103,6 +105,17 @@ export default function CreateOrderPage() {
   const [shippingNote, setShippingNote] = useState("");
   const [freebies, setFreebies] = useState<ProductFreebie[]>([]);
   const [selectedFreebies, setSelectedFreebies] = useState<number[]>([]);
+  const productCategories = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          products
+            .map((p) => (p.category ?? "").trim())
+            .filter(Boolean)
+        )
+      ).sort((a, b) => a.localeCompare(b)),
+    [products]
+  );
 
   const inputStyle: React.CSSProperties = {
     width: "100%",
@@ -202,7 +215,7 @@ export default function CreateOrderPage() {
   };
 
   const addItem = () => {
-    setItems([...items, { product_id: 0, discount_rule: "", freebies: [] }]);
+    setItems([...items, { product_category: "", product_id: 0, discount_rule: "", freebies: [] }]);
   };
 
   const removeItem = (index: number) => {
@@ -738,6 +751,29 @@ export default function CreateOrderPage() {
                 </div>
 
               <select
+                value={item.product_category || ""}
+                onChange={(e) => {
+                  const category = e.target.value;
+                  const next = [...items];
+                  next[i] = {
+                    ...next[i],
+                    product_category: category,
+                    product_id: 0,
+                    discount_rule: "",
+                  };
+                  setItems(next);
+                }}
+                style={inputStyle}
+              >
+                <option value="">-- เลือกหมวดสินค้า --</option>
+                {productCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {category}
+                  </option>
+                ))}
+              </select>
+
+              <select
                 value={item.product_id || ""}
                 onChange={(e) => {
                   const pid = Number(e.target.value) || 0;
@@ -749,14 +785,20 @@ export default function CreateOrderPage() {
                   };
                   setItems(next);
                 }}
-                style={inputStyle}
+                disabled={!item.product_category}
+                style={{
+                  ...inputStyle,
+                  opacity: item.product_category ? 1 : 0.7,
+                }}
               >
                 <option value="">-- เลือกสินค้า --</option>
-                {products.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+                {products
+                  .filter((p) => (p.category ?? "").trim() === (item.product_category ?? "").trim())
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
               </select>
 
               <select
