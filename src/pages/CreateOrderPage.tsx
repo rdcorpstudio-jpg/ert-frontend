@@ -60,7 +60,7 @@ function discountBahtFromRule(
 }
 
 const CARD_PAYMENT_METHODS = ["card_2c2p", "card_pay", "deposit_card_2c2p", "deposit_card_pay"] as const;
-const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_card_2c2p", "deposit_card_pay"] as const;
+const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_transfer", "deposit_card_2c2p", "deposit_card_pay"] as const;
 
 export default function CreateOrderPage() {
   const navigate = useNavigate();
@@ -286,6 +286,7 @@ export default function CreateOrderPage() {
       const paymentMethodLabelMap: Record<string, string> = {
         cod: "ปลายทาง (COD)",
         deposit_cod: "มัดจำ + ปลายทาง (Deposit + COD)",
+        deposit_transfer: "มัดจำ + โอน",
         deposit_card_2c2p: "มัดจำ + บัตร 2C2P",
         deposit_card_pay: "มัดจำ + บัตร PAY",
         transfer: "โอน",
@@ -338,7 +339,12 @@ export default function CreateOrderPage() {
                   return sum + (price - disc);
                 }, 0);
               const remain = Math.max(0, net - (Number.isNaN(dn) ? 0 : dn));
-              const remainLabel = paymentMethod === "deposit_cod" ? "เก็บปลายทาง" : "ยอดบัตรคงเหลือ";
+              const remainLabel =
+                paymentMethod === "deposit_cod"
+                  ? "เก็บปลายทาง"
+                  : paymentMethod === "deposit_transfer"
+                    ? "ยอดโอนคงเหลือ"
+                    : "ยอดบัตรคงเหลือ";
               return `\nมัดจำ: ฿${Number.isNaN(dn) ? "?" : dn.toLocaleString("th-TH")} / ${remainLabel}: ฿${remain.toLocaleString("th-TH")}`;
             })()
           : "";
@@ -836,6 +842,7 @@ export default function CreateOrderPage() {
             <option value="">-- เลือก --</option>
             <option value="cod">⭐ปลายทาง</option>
             <option value="deposit_cod">💵มัดจำ + ปลายทาง (Deposit + COD)</option>
+            <option value="deposit_transfer">💵มัดจำ + 💎โอน</option>
             <option value="deposit_card_2c2p">💵มัดจำ + 💳บัตร 2C2P</option>
             <option value="deposit_card_pay">💵มัดจำ + 💳บัตร PAY</option>
             <option value="transfer">💎โอน</option>

@@ -790,6 +790,7 @@ export default function DashboardPage() {
               const paymentMethodLabels: Record<string, string> = {
                 cod: "ปลายทาง (COD)",
                 deposit_cod: "มัดจำ + ปลายทาง (Deposit + COD)",
+                deposit_transfer: "มัดจำ + โอน",
                 deposit_card_2c2p: "มัดจำ + บัตร 2C2P",
                 deposit_card_pay: "มัดจำ + บัตร PAY",
                 transfer: "โอน",

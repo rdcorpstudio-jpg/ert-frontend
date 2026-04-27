@@ -41,6 +41,7 @@ const PAYMENT_METHOD_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "All" },
   { value: "cod", label: "ปลายทาง (COD)" },
   { value: "deposit_cod", label: "มัดจำ + ปลายทาง (Deposit + COD)" },
+  { value: "deposit_transfer", label: "มัดจำ + โอน" },
   { value: "deposit_card_2c2p", label: "มัดจำ + บัตร 2C2P" },
   { value: "deposit_card_pay", label: "มัดจำ + บัตร PAY" },
   { value: "transfer", label: "โอน" },

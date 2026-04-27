@@ -54,7 +54,7 @@ type Props = {
 };
 
 const CARD_PAYMENT_METHODS = ["card_2c2p", "card_pay", "deposit_card_2c2p", "deposit_card_pay"] as const;
-const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_card_2c2p", "deposit_card_pay"] as const;
+const DEPOSIT_PAYMENT_METHODS = ["deposit_cod", "deposit_transfer", "deposit_card_2c2p", "deposit_card_pay"] as const;
 
 // Allowed next statuses for manual change. Pending→Checked is NOT here: "Checked" is set only when accountant sets payment status to Checked (sync). From Checked onward, pack/manager can step.
 const ORDER_STATUS_FLOW: Record<string, string[]> = {
@@ -181,7 +181,7 @@ export default function OrderDetailModal({
           return (
             <span style={{ color: "#a8a8b8", fontWeight: 500 }}>
               {" "}
-              (มัดจำ {dep.toLocaleString("th-TH")} + {payment?.payment_method === "deposit_cod" ? "ปลายทาง" : "บัตร"} {codStr} บาท)
+              (มัดจำ {dep.toLocaleString("th-TH")} + {payment?.payment_method === "deposit_cod" ? "ปลายทาง" : payment?.payment_method === "deposit_transfer" ? "โอน" : "บัตร"} {codStr} บาท)
             </span>
           );
         })()
@@ -1450,6 +1450,7 @@ export default function OrderDetailModal({
               <option value="">-- เลือก --</option>
               <option value="cod">⭐ปลายทาง</option>
               <option value="deposit_cod">💵มัดจำ + ปลายทาง (Deposit + COD)</option>
+              <option value="deposit_transfer">💵มัดจำ + 💎โอน</option>
               <option value="deposit_card_2c2p">💵มัดจำ + 💳บัตร 2C2P</option>
               <option value="deposit_card_pay">💵มัดจำ + 💳บัตร PAY</option>
               <option value="transfer">💎โอน</option>
@@ -1476,7 +1477,11 @@ export default function OrderDetailModal({
                   <p style={{ margin: "8px 0 0", fontSize: 13, color: "#9ca3af" }}>
                     ยอดรวมออเดอร์: ฿{netTotal.toLocaleString("th-TH")}
                     {" · "}
-                    เก็บปลายทาง: ฿
+                    {paymentMethod === "deposit_cod"
+                      ? "เก็บปลายทาง"
+                      : paymentMethod === "deposit_transfer"
+                        ? "ยอดโอนคงเหลือ"
+                        : "ยอดบัตรคงเหลือ"}: ฿
                     {Math.max(
                       0,
                       netTotal -
@@ -1535,12 +1540,13 @@ export default function OrderDetailModal({
           <div style={value}>
             {paymentMethod === "cod" && "⭐ปลายทาง"}
             {paymentMethod === "deposit_cod" && "💵มัดจำ + ปลายทาง (Deposit + COD)"}
+            {paymentMethod === "deposit_transfer" && "💵มัดจำ + 💎โอน"}
             {paymentMethod === "deposit_card_2c2p" && "💵มัดจำ + 💳บัตร 2C2P"}
             {paymentMethod === "deposit_card_pay" && "💵มัดจำ + 💳บัตร PAY"}
             {paymentMethod === "transfer" && "💎โอน"}
             {paymentMethod === "card_2c2p" && "💳บัตร 2C2P"}
             {paymentMethod === "card_pay" && "💳บัตร PAY"}
-            {!["cod", "deposit_cod", "deposit_card_2c2p", "deposit_card_pay", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
+            {!["cod", "deposit_cod", "deposit_transfer", "deposit_card_2c2p", "deposit_card_pay", "transfer", "card_2c2p", "card_pay"].includes(paymentMethod) && (paymentMethod || "—")}
             {CARD_PAYMENT_METHODS.includes(paymentMethod as (typeof CARD_PAYMENT_METHODS)[number]) && (installmentType === "full" ? " (ตัดเต็ม)" : installmentType === "installment" ? ` (ผ่อน ${installmentMonths || "?"} เดือน)` : "")}
             {DEPOSIT_PAYMENT_METHODS.includes(paymentMethod as (typeof DEPOSIT_PAYMENT_METHODS)[number]) && payment && (
               <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.5 }}>
@@ -1549,7 +1555,11 @@ export default function OrderDetailModal({
                   ? Number(payment.deposit_amount).toLocaleString("th-TH")
                   : "—"}
                 <br />
-                {paymentMethod === "deposit_cod" ? "เก็บปลายทาง" : "ยอดบัตรคงเหลือ"}: ฿
+                {paymentMethod === "deposit_cod"
+                  ? "เก็บปลายทาง"
+                  : paymentMethod === "deposit_transfer"
+                    ? "ยอดโอนคงเหลือ"
+                    : "ยอดบัตรคงเหลือ"}: ฿
                 {payment.cod_expected_amount != null && payment.cod_expected_amount !== undefined
                   ? Number(payment.cod_expected_amount).toLocaleString("th-TH")
                   : "—"}
