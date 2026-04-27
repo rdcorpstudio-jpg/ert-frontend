@@ -265,13 +265,15 @@ export default function DevPage() {
     const byId = new Map(products.map((p) => [p.id, p] as const));
     const orderedByDraft = productOrderDraft.map((id) => byId.get(id)).filter((p): p is Product => Boolean(p));
     const missing = products.filter((p) => !productOrderDraft.includes(p.id));
-    return [...orderedByDraft, ...missing].sort((a, b) => {
+    const combined = [...orderedByDraft, ...missing];
+    const orderIndex = new Map(combined.map((p, idx) => [p.id, idx] as const));
+    return combined.sort((a, b) => {
       const ca = categoryOrderDraft.indexOf((a.category ?? "").trim());
       const cb = categoryOrderDraft.indexOf((b.category ?? "").trim());
       const caIdx = ca === -1 ? 999_999 : ca;
       const cbIdx = cb === -1 ? 999_999 : cb;
       if (caIdx !== cbIdx) return caIdx - cbIdx;
-      return a.id - b.id;
+      return (orderIndex.get(a.id) ?? 999_999) - (orderIndex.get(b.id) ?? 999_999);
     });
   };
 
